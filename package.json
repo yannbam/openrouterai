@@ -1,0 +1,21 @@
+{
+  "name": "@mcpserver/openrouterai",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "start": "node build/index.js",
+    "dev": "tsc -w"
+  },
+  "keywords": [],
+  "author": "bossying",
+  "license": "Apache-2.0",
+  "description": "MCP server for OpenRouter.ai integration",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.1.0",
+    "openai": "^4.0.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
