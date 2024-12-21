@@ -17,6 +17,16 @@
    - Solution: Implemented structured error responses with specific messages
    - Learning: Provide context-specific error information
 
+4. Model Management
+   - Issue: OpenAI SDK models.list() doesn't provide OpenRouter-specific info
+   - Solution: Added type conversion with placeholder values
+   - Learning: Need to switch to OpenRouter's /models endpoint for accurate data
+
+5. State Management
+   - Issue: Initially had no validation for default model setting
+   - Solution: Implemented model validation before state changes
+   - Learning: Always validate state changes to prevent invalid states
+
 ## Common Pitfalls
 
 1. Model Names
@@ -34,19 +44,58 @@
    - Solution: Use MCP environment variables
    - Prevention: Follow MCP server configuration patterns
 
+4. Model Data
+   - Pitfall: Assuming OpenAI SDK provides all needed model information
+   - Solution: Created custom interfaces for OpenRouter model data
+   - Prevention: Check API documentation for required data structures
+
+5. State Validation
+   - Pitfall: Setting invalid models as default
+   - Solution: Added model validation before state changes
+   - Prevention: Implement validation for all state modifications
+
 ## Best Practices Identified
 
 1. Type Safety
    - Always use strict TypeScript types
    - Avoid type assertions when possible
    - Leverage SDK type definitions
+   - Create custom interfaces for specific needs
 
 2. Error Management
    - Use McpError for consistent error handling
    - Include meaningful error messages
    - Log errors for debugging
+   - Return isError: true for API errors
 
 3. Documentation
    - Keep examples up to date
    - Document configuration requirements
    - Include usage patterns
+   - Provide examples for all tools
+
+4. State Management
+   - Use singleton pattern for consistent state
+   - Implement validation for state changes
+   - Include methods for state cleanup
+   - Cache data when appropriate
+
+5. Model Management
+   - Validate models before operations
+   - Cache model information for performance
+   - Provide clear error messages for invalid models
+   - Include detailed model information in responses
+
+## Future Improvements Identified
+
+1. API Integration
+   - Switch to OpenRouter's /models endpoint
+   - Implement rate limiting
+   - Add retry logic for failed requests
+   - Add token counting and cost estimation
+
+2. Model Capabilities
+   - Add model capability validation
+   - Verify model support for features
+   - Include pricing information
+   - Add context length validation

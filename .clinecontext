@@ -1,33 +1,62 @@
 # OpenRouter MCP Server Context
 
 ## Project Overview
-This MCP server was created to provide a unified interface for accessing various AI models through OpenRouter.ai. The implementation focuses on simplicity and reliability while maintaining extensibility for future features.
+This MCP server provides a unified interface for accessing various AI models through OpenRouter.ai. The implementation focuses on simplicity and reliability while maintaining extensibility for future features.
 
 ## Key Decisions
 1. Used OpenAI SDK for OpenRouter integration
    - Reasoning: OpenRouter follows OpenAI's API format
    - Benefit: Type safety and built-in error handling
 
-2. Implemented single chat_completion tool initially
-   - Reasoning: Most common use case
-   - Future: Can expand to support other endpoints
+2. Implemented model management tools
+   - list_models: View all available models
+   - search_models: Find specific models
+   - set_default_model: Configure default model
+   - clear_default_model: Reset default model
+   - get_model_info: Get model details
+   - validate_model: Verify model validity
 
-3. Headers configuration in OpenAI client
+3. State Management Implementation
+   - Used singleton pattern for consistent state
+   - Implemented model caching for performance
+   - Added model validation before operations
+   - Included clear methods for cleanup
+
+4. Headers configuration in OpenAI client
    - Reasoning: Consistent headers across all requests
    - Implementation: Set in constructor via defaultHeaders
 
 ## User Interactions
-- Successfully tested with meta-llama/llama-3.2-11b-vision-instruct:free
+- Successfully tested with various models including:
+  - anthropic/claude-3-opus-20240229
+  - anthropic/claude-3-sonnet-20240229
+  - cohere/command-r-08-2024
 - Updated model examples to reflect current OpenRouter offerings
-- Changed license from MIT to Apache 2.0
+- Added model validation and information retrieval
+
+## Current Status
+1. Implemented Features:
+   - Chat completion with optional default model
+   - Model listing with pricing and context length
+   - Model search and validation
+   - State management with caching
+   - Detailed model information retrieval
+
+2. Areas for Improvement:
+   - Switch to OpenRouter's /models endpoint for accurate data
+   - Add rate limiting and retry logic
+   - Add model capability validation
+   - Add cost estimation based on token count
 
 ## Future Considerations
 1. Potential features to implement:
    - Stream support for real-time responses
-   - Model validation before requests
-   - Rate limit handling improvements
+   - Better rate limit handling
+   - Token counting and cost estimation
+   - Model capability verification
 
 2. Areas for optimization:
    - Error message formatting
    - Response type safety
    - Request validation
+   - Model data accuracy

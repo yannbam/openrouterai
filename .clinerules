@@ -5,6 +5,7 @@
 - Follow ESM module syntax (import/export)
 - Use async/await for asynchronous operations
 - Maintain strict typing, avoid 'any' types
+- Use interfaces for model types and responses
 
 ## Git Conventions
 - Use conventional commits (feat, fix, docs, etc.)
@@ -22,16 +23,28 @@
   - X-Title
 - Handle rate limits gracefully
 - Validate model names before requests
+- Cache model information for performance
+- Validate models before setting as default
+
+## State Management
+- Use singleton pattern for state
+- Implement clear methods for cleanup
+- Validate state before operations
+- Cache model data when possible
 
 ## Error Handling
 - Use McpError for MCP-specific errors
 - Provide clear error messages
 - Log errors for debugging
+- Return isError: true for API errors
+- Include helpful error messages for invalid models
 
 ## Documentation
 - Keep README up to date
 - Document all public interfaces
 - Include examples for new features
+- Document all available tools
+- Include usage examples for each tool
 
 ## Dependencies
 - Minimize external dependencies
