@@ -1,0 +1,52 @@
+# OpenRouter MCP Server Lessons Learned
+
+## Implementation Insights
+
+1. OpenAI SDK Type Safety
+   - Issue: Initial implementation had type errors with message parameters
+   - Solution: Properly imported and used ChatCompletionMessageParam type
+   - Learning: Always check SDK type definitions for accurate typing
+
+2. Headers Configuration
+   - Issue: Initially placed headers in request options
+   - Solution: Moved to client defaultHeaders for consistency
+   - Learning: Review API client configuration options thoroughly
+
+3. Error Handling
+   - Issue: Generic error responses weren't helpful
+   - Solution: Implemented structured error responses with specific messages
+   - Learning: Provide context-specific error information
+
+## Common Pitfalls
+
+1. Model Names
+   - Pitfall: Not all OpenAI-compatible models work with OpenRouter
+   - Solution: Reference OpenRouter's model list documentation
+   - Prevention: Document supported models clearly
+
+2. API Response Handling
+   - Pitfall: Not checking for empty responses
+   - Solution: Added null coalescing for message content
+   - Prevention: Always handle edge cases in API responses
+
+3. Configuration
+   - Pitfall: Hardcoding configuration values
+   - Solution: Use MCP environment variables
+   - Prevention: Follow MCP server configuration patterns
+
+## Best Practices Identified
+
+1. Type Safety
+   - Always use strict TypeScript types
+   - Avoid type assertions when possible
+   - Leverage SDK type definitions
+
+2. Error Management
+   - Use McpError for consistent error handling
+   - Include meaningful error messages
+   - Log errors for debugging
+
+3. Documentation
+   - Keep examples up to date
+   - Document configuration requirements
+   - Include usage patterns

@@ -1,0 +1,39 @@
+# OpenRouter MCP Server Rules
+
+## Code Style
+- Use TypeScript for all source files
+- Follow ESM module syntax (import/export)
+- Use async/await for asynchronous operations
+- Maintain strict typing, avoid 'any' types
+
+## Git Conventions
+- Use conventional commits (feat, fix, docs, etc.)
+- Keep commits focused and atomic
+- Branch naming: feature/*, bugfix/*, docs/*
+
+## Project Structure
+- src/ - Source code
+- build/ - Compiled JavaScript
+- tests/ - Test files (future implementation)
+
+## OpenRouter API
+- Always include required headers:
+  - HTTP-Referer
+  - X-Title
+- Handle rate limits gracefully
+- Validate model names before requests
+
+## Error Handling
+- Use McpError for MCP-specific errors
+- Provide clear error messages
+- Log errors for debugging
+
+## Documentation
+- Keep README up to date
+- Document all public interfaces
+- Include examples for new features
+
+## Dependencies
+- Minimize external dependencies
+- Keep dependencies up to date
+- Use exact versions in package.json

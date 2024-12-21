@@ -1,0 +1,33 @@
+# OpenRouter MCP Server Context
+
+## Project Overview
+This MCP server was created to provide a unified interface for accessing various AI models through OpenRouter.ai. The implementation focuses on simplicity and reliability while maintaining extensibility for future features.
+
+## Key Decisions
+1. Used OpenAI SDK for OpenRouter integration
+   - Reasoning: OpenRouter follows OpenAI's API format
+   - Benefit: Type safety and built-in error handling
+
+2. Implemented single chat_completion tool initially
+   - Reasoning: Most common use case
+   - Future: Can expand to support other endpoints
+
+3. Headers configuration in OpenAI client
+   - Reasoning: Consistent headers across all requests
+   - Implementation: Set in constructor via defaultHeaders
+
+## User Interactions
+- Successfully tested with meta-llama/llama-3.2-11b-vision-instruct:free
+- Updated model examples to reflect current OpenRouter offerings
+- Changed license from MIT to Apache 2.0
+
+## Future Considerations
+1. Potential features to implement:
+   - Stream support for real-time responses
+   - Model validation before requests
+   - Rate limit handling improvements
+
+2. Areas for optimization:
+   - Error message formatting
+   - Response type safety
+   - Request validation
