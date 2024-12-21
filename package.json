@@ -13,9 +13,12 @@
   "license": "Apache-2.0",
   "description": "MCP server for OpenRouter.ai integration",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.1.0",
+    "@modelcontextprotocol/sdk": "1.0.4",
+    "axios": "^1.6.2",
     "openai": "^4.0.0",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2"
   }
 }

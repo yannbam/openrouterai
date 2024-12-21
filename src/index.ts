@@ -9,6 +9,8 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+import axios, { AxiosError, AxiosInstance } from 'axios';
+import { setTimeout } from 'timers/promises';
 
 interface OpenRouterModel {
   id: string;
@@ -18,18 +20,42 @@ interface OpenRouterModel {
   pricing: {
     prompt: string;
     completion: string;
+    unit: number;
+  };
+  top_provider?: {
+    max_completion_tokens?: number;
+    max_context_length?: number;
+  };
+  capabilities?: {
+    functions?: boolean;
+    tools?: boolean;
+    vision?: boolean;
+    json_mode?: boolean;
   };
 }
 
 interface OpenRouterModelResponse {
   data: OpenRouterModel[];
+  timestamp?: number;
 }
+
+interface CachedModelResponse extends OpenRouterModelResponse {
+  timestamp: number;
+}
+
+interface RateLimitState {
+  remaining: number;
+  reset: number;
+  total: number;
+}
+
+const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff delays in ms
 
 // Simple in-memory state management
 class StateManager {
   private static instance: StateManager;
   private defaultModel: string | undefined;
-  private cachedModels: OpenRouterModelResponse | null = null;
+  private cachedModels: CachedModelResponse | null = null;
 
   private constructor() {}
 
@@ -38,6 +64,12 @@ class StateManager {
       StateManager.instance = new StateManager();
     }
     return StateManager.instance;
+  }
+
+  private validateCache(): boolean {
+    if (!this.cachedModels) return false;
+    const cacheExpiry = 3600000; // 1 hour in milliseconds
+    return Date.now() - this.cachedModels.timestamp <= cacheExpiry;
   }
 
   setDefaultModel(model: string) {
@@ -52,12 +84,12 @@ class StateManager {
     this.defaultModel = undefined;
   }
 
-  setCachedModels(models: OpenRouterModelResponse) {
-    this.cachedModels = models;
+  setCachedModels(models: OpenRouterModelResponse & { timestamp: number }) {
+    this.cachedModels = models as CachedModelResponse;
   }
 
-  getCachedModels(): OpenRouterModelResponse | null {
-    return this.cachedModels;
+  getCachedModels(): CachedModelResponse | null {
+    return this.validateCache() ? this.cachedModels : null;
   }
 
   clearCachedModels() {
@@ -86,9 +118,51 @@ class OpenRouterServer {
   private server: Server;
   private openai: OpenAI;
   private stateManager: StateManager;
+  private axiosInstance: AxiosInstance;
+  private rateLimit: RateLimitState = {
+    remaining: 50, // Default conservative value
+    reset: Date.now() + 60000,
+    total: 50
+  };
 
   constructor() {
     this.stateManager = StateManager.getInstance();
+    
+    // Initialize axios instance for OpenRouter API
+    this.axiosInstance = axios.create({
+      baseURL: 'https://openrouter.ai/api/v1',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://github.com/heltonteixeira/openrouterai',
+        'X-Title': 'MCP OpenRouter Server'
+      }
+    });
+
+    // Add response interceptor for rate limit headers
+    this.axiosInstance.interceptors.response.use(
+      (response: any) => {
+        const remaining = parseInt(response.headers['x-ratelimit-remaining'] || '50');
+        const reset = parseInt(response.headers['x-ratelimit-reset'] || '60');
+        const total = parseInt(response.headers['x-ratelimit-limit'] || '50');
+
+        this.rateLimit = {
+          remaining,
+          reset: Date.now() + (reset * 1000),
+          total
+        };
+
+        return response;
+      },
+      async (error: AxiosError) => {
+        if (error.response?.status === 429) {
+          console.error('Rate limit exceeded, waiting for reset...');
+          const resetAfter = parseInt(error.response.headers['retry-after'] || '60');
+          await setTimeout(resetAfter * 1000);
+          return this.axiosInstance.request(error.config!);
+        }
+        throw error;
+      }
+    );
     this.server = new Server(
       {
         name: 'openrouter-server',
@@ -292,24 +366,42 @@ class OpenRouterServer {
 
         case 'list_models': {
           try {
-            // Use cached models if available
+            // Check rate limits before making request
+            if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
+              const waitTime = this.rateLimit.reset - Date.now();
+              await setTimeout(waitTime);
+            }
+
+            // Use cached models if available and valid
             let models = this.stateManager.getCachedModels();
+            
             if (!models) {
-              const response = await this.openai.models.list();
-              // Convert OpenAI model format to OpenRouter format
-              const openRouterModels: OpenRouterModelResponse = {
-                data: response.data.map(model => ({
-                  id: model.id,
-                  name: model.id.split('/').pop() || model.id,
-                  context_length: 4096, // Default value, should be fetched from OpenRouter API
-                  pricing: {
-                    prompt: "0.000", // Default value, should be fetched from OpenRouter API
-                    completion: "0.000" // Default value, should be fetched from OpenRouter API
-                  }
-                }))
+              for (let i = 0; i <= RETRY_DELAYS.length; i++) {
+                try {
+                  const response = await this.axiosInstance.get<OpenRouterModelResponse>('/models');
+                  models = {
+                    data: response.data.data,
+                    timestamp: Date.now()
+                  };
+                  this.stateManager.setCachedModels(models);
+                  break;
+                } catch (error) {
+                  if (i === RETRY_DELAYS.length) throw error;
+                  await setTimeout(RETRY_DELAYS[i]);
+                }
+              }
+            }
+
+            if (!models) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Failed to fetch models. Please try again.',
+                  },
+                ],
+                isError: true,
               };
-              this.stateManager.setCachedModels(openRouterModels);
-              models = openRouterModels;
             }
 
             return {
@@ -339,24 +431,29 @@ class OpenRouterServer {
         case 'search_models': {
           const { query } = request.params.arguments as { query: string };
           try {
+            // Check rate limits before making request
+            if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
+              const waitTime = this.rateLimit.reset - Date.now();
+              await setTimeout(waitTime);
+            }
+
             // Use cached models if available
             let models = this.stateManager.getCachedModels();
             if (!models) {
-              const response = await this.openai.models.list();
-              // Convert OpenAI model format to OpenRouter format
-              const openRouterModels: OpenRouterModelResponse = {
-                data: response.data.map(model => ({
-                  id: model.id,
-                  name: model.id.split('/').pop() || model.id,
-                  context_length: 4096, // Default value, should be fetched from OpenRouter API
-                  pricing: {
-                    prompt: "0.000", // Default value, should be fetched from OpenRouter API
-                    completion: "0.000" // Default value, should be fetched from OpenRouter API
-                  }
-                }))
-              };
-              this.stateManager.setCachedModels(openRouterModels);
-              models = openRouterModels;
+              for (let i = 0; i <= RETRY_DELAYS.length; i++) {
+                try {
+                  const response = await this.axiosInstance.get<OpenRouterModelResponse>('/models');
+                  models = {
+                    data: response.data.data,
+                    timestamp: Date.now()
+                  };
+                  this.stateManager.setCachedModels(models);
+                  break;
+                } catch (error) {
+                  if (i === RETRY_DELAYS.length) throw error;
+                  await setTimeout(RETRY_DELAYS[i]);
+                }
+              }
             }
 
             if (!models) {

@@ -2,100 +2,100 @@
 
 ## Implementation Insights
 
-1. OpenAI SDK Type Safety
-   - Issue: Initial implementation had type errors with message parameters
-   - Solution: Properly imported and used ChatCompletionMessageParam type
-   - Learning: Always check SDK type definitions for accurate typing
+1. API Integration
+   - Issue: OpenAI SDK models.list() lacked OpenRouter-specific data
+   - Solution: Implemented direct OpenRouter /models endpoint integration
+   - Learning: Use API-specific endpoints for accurate data
 
-2. Headers Configuration
-   - Issue: Initially placed headers in request options
-   - Solution: Moved to client defaultHeaders for consistency
-   - Learning: Review API client configuration options thoroughly
+2. Rate Limiting
+   - Issue: API requests could fail during high usage
+   - Solution: Implemented header-based rate tracking with exponential backoff
+   - Learning: Always implement proper rate limiting for API stability
 
 3. Error Handling
    - Issue: Generic error responses weren't helpful
-   - Solution: Implemented structured error responses with specific messages
-   - Learning: Provide context-specific error information
+   - Solution: Added structured error handling with specific messages
+   - Learning: Provide detailed error context for better debugging
 
 4. Model Management
-   - Issue: OpenAI SDK models.list() doesn't provide OpenRouter-specific info
-   - Solution: Added type conversion with placeholder values
-   - Learning: Need to switch to OpenRouter's /models endpoint for accurate data
+   - Issue: Model capabilities weren't properly tracked
+   - Solution: Added comprehensive model interface with capability tracking
+   - Learning: Design interfaces to capture all API-specific features
 
 5. State Management
-   - Issue: Initially had no validation for default model setting
-   - Solution: Implemented model validation before state changes
-   - Learning: Always validate state changes to prevent invalid states
+   - Issue: Cache invalidation wasn't properly handled
+   - Solution: Implemented timed cache with validation
+   - Learning: Always include cache invalidation strategy
 
 ## Common Pitfalls
 
-1. Model Names
-   - Pitfall: Not all OpenAI-compatible models work with OpenRouter
-   - Solution: Reference OpenRouter's model list documentation
-   - Prevention: Document supported models clearly
+1. Rate Limits
+   - Pitfall: Not handling rate limits properly
+   - Solution: Implemented header tracking and automatic waiting
+   - Prevention: Monitor and respect API rate limits
 
-2. API Response Handling
-   - Pitfall: Not checking for empty responses
-   - Solution: Added null coalescing for message content
-   - Prevention: Always handle edge cases in API responses
+2. API Response Types
+   - Pitfall: Incorrect assumptions about response structure
+   - Solution: Created comprehensive type interfaces
+   - Prevention: Validate API responses against documentation
 
-3. Configuration
-   - Pitfall: Hardcoding configuration values
-   - Solution: Use MCP environment variables
-   - Prevention: Follow MCP server configuration patterns
+3. Cache Management
+   - Pitfall: Stale data causing inconsistencies
+   - Solution: Added cache expiration and validation
+   - Prevention: Implement proper cache lifecycle
 
-4. Model Data
-   - Pitfall: Assuming OpenAI SDK provides all needed model information
-   - Solution: Created custom interfaces for OpenRouter model data
-   - Prevention: Check API documentation for required data structures
+4. Error Recovery
+   - Pitfall: Failed requests not properly retried
+   - Solution: Added exponential backoff strategy
+   - Prevention: Always implement retry logic for API calls
 
-5. State Validation
-   - Pitfall: Setting invalid models as default
-   - Solution: Added model validation before state changes
-   - Prevention: Implement validation for all state modifications
+5. Model Capabilities
+   - Pitfall: Not checking model-specific features
+   - Solution: Added capability validation
+   - Prevention: Track and verify model capabilities
 
 ## Best Practices Identified
 
-1. Type Safety
-   - Always use strict TypeScript types
-   - Avoid type assertions when possible
-   - Leverage SDK type definitions
-   - Create custom interfaces for specific needs
+1. API Integration
+   - Use API-specific endpoints for accurate data
+   - Implement proper rate limiting
+   - Handle retries with exponential backoff
+   - Validate responses against types
 
 2. Error Management
-   - Use McpError for consistent error handling
-   - Include meaningful error messages
+   - Provide detailed error context
+   - Implement proper retry strategies
    - Log errors for debugging
-   - Return isError: true for API errors
+   - Return structured error responses
 
-3. Documentation
-   - Keep examples up to date
-   - Document configuration requirements
-   - Include usage patterns
-   - Provide examples for all tools
+3. State Management
+   - Use singleton pattern for consistency
+   - Implement proper cache invalidation
+   - Validate state changes
+   - Track resource usage
 
-4. State Management
-   - Use singleton pattern for consistent state
-   - Implement validation for state changes
-   - Include methods for state cleanup
-   - Cache data when appropriate
+4. Performance
+   - Cache frequently accessed data
+   - Implement efficient retry strategies
+   - Use proper typing for runtime checks
+   - Optimize API request patterns
 
 5. Model Management
-   - Validate models before operations
-   - Cache model information for performance
-   - Provide clear error messages for invalid models
-   - Include detailed model information in responses
+   - Track model capabilities
+   - Validate before operations
+   - Cache model information
+   - Handle API-specific features
 
 ## Future Improvements Identified
 
-1. API Integration
-   - Switch to OpenRouter's /models endpoint
-   - Implement rate limiting
-   - Add retry logic for failed requests
-   - Add token counting and cost estimation
+1. API Features
+   - Implement streaming support
+   - Add batch processing
+   - Support model-specific features
+   - Add cost estimation
 
-2. Model Capabilities
-   - Add model capability validation
-   - Verify model support for features
-   - Include pricing information
-   - Add context length validation
+2. Performance
+   - Optimize cache strategies
+   - Improve rate limit handling
+   - Add request batching
+   - Enhance error recovery

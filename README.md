@@ -5,12 +5,23 @@ A Model Context Protocol (MCP) server that provides integration with OpenRouter.
 ## Features
 
 - Chat completion support for all OpenRouter.ai models
-- Model management with default model selection
-- Model search and information retrieval
-- Temperature control for response randomness
-- Full message history support
-- Error handling and reporting
-- Model validation and verification
+- Advanced model management:
+  - Default model selection
+  - Model search and validation
+  - Accurate pricing and context length information
+  - Model capability detection (functions, tools, vision, json_mode)
+- Robust API handling:
+  - Rate limiting with automatic retry
+  - Exponential backoff for failed requests
+  - Request caching with automatic expiration
+- Performance optimizations:
+  - Model information caching (1-hour expiry)
+  - State management with validation
+  - Efficient model capability tracking
+- Error handling and reporting:
+  - Detailed error messages
+  - Rate limit handling
+  - API error recovery
 
 ## Installation
 
@@ -106,16 +117,48 @@ const isValid = await mcpClient.useTool("openrouterai", "validate_model", {
 });
 ```
 
-## Available Models
+## Model Information
 
-You can use any model available on OpenRouter.ai. Some examples:
+The server now provides accurate model information directly from OpenRouter.ai:
 
-- `anthropic/claude-3-opus-20240229`
-- `anthropic/claude-3-sonnet-20240229`
-- `cohere/command-r-08-2024`
-- `meta-llama/llama-3.2-11b-vision-instruct:free`
+- **Pricing Data**: Accurate cost per token for both prompt and completion
+- **Context Length**: Model-specific maximum context window
+- **Capabilities**: Support for:
+  - Function calling
+  - Tool use
+  - Vision/image processing
+  - JSON mode
+- **Provider Details**: Maximum completion tokens and context lengths
 
-For a complete list and pricing information, use the `list_models` tool or visit [OpenRouter Models](https://openrouter.ai/docs#models).
+Use the `list_models` tool to get up-to-date information about available models and their capabilities.
+
+## Rate Limiting
+
+The server implements intelligent rate limit handling:
+
+- Tracks remaining requests through response headers
+- Automatically waits when rate limits are reached
+- Implements exponential backoff for failed requests
+- Provides clear error messages for rate limit issues
+
+## Caching
+
+Model information is cached for optimal performance:
+
+- 1-hour cache duration for model data
+- Automatic cache invalidation
+- Cache bypass for force-refresh
+- Memory-efficient storage
+
+## Error Handling
+
+Robust error handling for all operations:
+
+- Rate limit detection and recovery
+- API error reporting with details
+- Model validation failures
+- Cache-related issues
+- Network timeouts and retries
 
 ## License
 

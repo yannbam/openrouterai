@@ -37,26 +37,29 @@ This MCP server provides a unified interface for accessing various AI models thr
 ## Current Status
 1. Implemented Features:
    - Chat completion with optional default model
-   - Model listing with pricing and context length
-   - Model search and validation
-   - State management with caching
+   - Model listing with accurate pricing and context length
+   - Model search with capability filtering
+   - State management with timed caching
    - Detailed model information retrieval
+   - Rate limiting with exponential backoff
+   - Model capability validation
+   - Robust error handling
 
 2. Areas for Improvement:
-   - Switch to OpenRouter's /models endpoint for accurate data
-   - Add rate limiting and retry logic
-   - Add model capability validation
-   - Add cost estimation based on token count
+   - Add streaming support for real-time responses
+   - Implement token counting for cost estimation
+   - Add batch request support
+   - Enhance model capability validation
 
 ## Future Considerations
 1. Potential features to implement:
-   - Stream support for real-time responses
-   - Better rate limit handling
-   - Token counting and cost estimation
-   - Model capability verification
+   - Streaming API support
+   - Cost estimation and budgeting
+   - Batch processing for multiple requests
+   - Enhanced model capability detection
 
 2. Areas for optimization:
-   - Error message formatting
-   - Response type safety
-   - Request validation
-   - Model data accuracy
+   - Response streaming efficiency
+   - Cache invalidation strategies
+   - Rate limit optimization
+   - Request batching performance
