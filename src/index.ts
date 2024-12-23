@@ -155,7 +155,7 @@ class OpenRouterServer {
     this.server = new Server(
       {
         name: 'openrouter-server',
-        version: '0.1.0',
+        version: '2.0.0',
       },
       {
         capabilities: {
@@ -226,25 +226,64 @@ class OpenRouterServer {
           },
         },
         {
-          name: 'list_models',
-          description: 'List all available models from OpenRouter.ai with pricing and context length',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-          },
-        },
-        {
           name: 'search_models',
-          description: 'Search for specific models by name or provider',
+          description: 'Search and filter OpenRouter.ai models based on various criteria',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: 'Search query (e.g., "gpt", "anthropic", "claude")',
+                description: 'Optional search query to filter by name, description, or provider',
               },
-            },
-            required: ['query'],
+              provider: {
+                type: 'string',
+                description: 'Filter by specific provider (e.g., "anthropic", "openai", "cohere")',
+              },
+              minContextLength: {
+                type: 'number',
+                description: 'Minimum context length in tokens',
+              },
+              maxContextLength: {
+                type: 'number',
+                description: 'Maximum context length in tokens',
+              },
+              maxPromptPrice: {
+                type: 'number',
+                description: 'Maximum price per 1K tokens for prompts',
+              },
+              maxCompletionPrice: {
+                type: 'number',
+                description: 'Maximum price per 1K tokens for completions',
+              },
+              capabilities: {
+                type: 'object',
+                description: 'Filter by model capabilities',
+                properties: {
+                  functions: {
+                    type: 'boolean',
+                    description: 'Requires function calling capability',
+                  },
+                  tools: {
+                    type: 'boolean',
+                    description: 'Requires tools capability',
+                  },
+                  vision: {
+                    type: 'boolean',
+                    description: 'Requires vision capability',
+                  },
+                  json_mode: {
+                    type: 'boolean',
+                    description: 'Requires JSON mode capability',
+                  }
+                }
+              },
+              limit: {
+                type: 'number',
+                description: 'Maximum number of results to return (default: 10)',
+                minimum: 1,
+                maximum: 50
+              }
+            }
           },
         },
         {
@@ -307,11 +346,32 @@ class OpenRouterServer {
               temperature: args.temperature ?? 1,
             });
 
+            // Format response to match OpenRouter schema
+            const response = {
+              id: `gen-${Date.now()}`,
+              choices: [{
+                finish_reason: completion.choices[0].finish_reason,
+                message: {
+                  role: completion.choices[0].message.role,
+                  content: completion.choices[0].message.content || '',
+                  tool_calls: completion.choices[0].message.tool_calls
+                }
+              }],
+              created: Math.floor(Date.now() / 1000),
+              model: model,
+              object: 'chat.completion',
+              usage: completion.usage || {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0
+              }
+            };
+
             return {
               content: [
                 {
                   type: 'text',
-                  text: completion.choices[0].message.content || '',
+                  text: JSON.stringify(response, null, 2),
                 },
               ],
             };
@@ -331,72 +391,22 @@ class OpenRouterServer {
           }
         }
 
-        case 'list_models': {
-          try {
-            // Check rate limits before making request
-            if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
-              const waitTime = this.rateLimit.reset - Date.now();
-              await setTimeout(waitTime);
-            }
-
-            // Use cached models if available and valid
-            let models = this.modelCache.getCachedModels();
-            
-            if (!models) {
-              for (let i = 0; i <= RETRY_DELAYS.length; i++) {
-                try {
-                  const response = await this.axiosInstance.get<OpenRouterModelResponse>('/models');
-                  models = {
-                    data: response.data.data,
-                    timestamp: Date.now()
-                  };
-                  this.modelCache.setCachedModels(models);
-                  break;
-                } catch (error) {
-                  if (i === RETRY_DELAYS.length) throw error;
-                  await setTimeout(RETRY_DELAYS[i]);
-                }
-              }
-            }
-
-            if (!models) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Failed to fetch models. Please try again.',
-                  },
-                ],
-                isError: true,
-              };
-            }
-
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(models.data, null, 2),
-                },
-              ],
-            };
-          } catch (error) {
-            if (error instanceof Error) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: `Failed to fetch models: ${error.message}`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-            throw error;
-          }
-        }
-
         case 'search_models': {
-          const { query } = request.params.arguments as { query: string };
+          const args = request.params.arguments as {
+            query?: string;
+            provider?: string;
+            minContextLength?: number;
+            maxContextLength?: number;
+            maxPromptPrice?: number;
+            maxCompletionPrice?: number;
+            capabilities?: {
+              functions?: boolean;
+              tools?: boolean;
+              vision?: boolean;
+              json_mode?: boolean;
+            };
+            limit?: number;
+          };
           try {
             // Check rate limits before making request
             if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
@@ -428,22 +438,112 @@ class OpenRouterServer {
                 content: [
                   {
                     type: 'text',
-                    text: 'Failed to fetch models. Please try again.',
+                    text: JSON.stringify({
+                      error: {
+                        code: 'fetch_failed',
+                        message: 'Failed to fetch models. Please try again.',
+                        details: {
+                          applied_filters: {
+                            query: args.query,
+                            provider: args.provider,
+                            minContextLength: args.minContextLength,
+                            maxContextLength: args.maxContextLength,
+                            maxPromptPrice: args.maxPromptPrice,
+                            maxCompletionPrice: args.maxCompletionPrice,
+                            capabilities: args.capabilities,
+                            limit: args.limit
+                          }
+                        }
+                      }
+                    }, null, 2),
                   },
                 ],
                 isError: true,
               };
             }
 
-            const searchResults = models.data.filter(model =>
-              model.id.toLowerCase().includes(query.toLowerCase())
-            );
+            // Apply all filters
+            const searchResults = models.data
+              .filter(model => {
+                // Text search
+                if (args.query) {
+                  const searchTerm = args.query.toLowerCase();
+                  const matchesQuery = 
+                    model.id.toLowerCase().includes(searchTerm) ||
+                    (model.name && model.name.toLowerCase().includes(searchTerm)) ||
+                    (model.description && model.description.toLowerCase().includes(searchTerm));
+                  if (!matchesQuery) return false;
+                }
+
+                // Provider filter
+                if (args.provider) {
+                  const provider = model.id.split('/')[0];
+                  if (provider !== args.provider.toLowerCase()) return false;
+                }
+
+                // Context length filters
+                if (args.minContextLength && model.context_length < args.minContextLength) return false;
+                if (args.maxContextLength && model.context_length > args.maxContextLength) return false;
+
+                // Price filters
+                if (args.maxPromptPrice && parseFloat(model.pricing.prompt) > args.maxPromptPrice) return false;
+                if (args.maxCompletionPrice && parseFloat(model.pricing.completion) > args.maxCompletionPrice) return false;
+
+                // Capabilities filters
+                if (args.capabilities) {
+                  if (args.capabilities.functions && !model.capabilities?.functions) return false;
+                  if (args.capabilities.tools && !model.capabilities?.tools) return false;
+                  if (args.capabilities.vision && !model.capabilities?.vision) return false;
+                  if (args.capabilities.json_mode && !model.capabilities?.json_mode) return false;
+                }
+
+                return true;
+              })
+              // Apply limit
+              .slice(0, args.limit || 10)
+              .map(model => ({
+                id: model.id,
+                name: model.name,
+                description: model.description || 'No description available',
+                context_length: model.context_length,
+                pricing: {
+                  prompt: `$${model.pricing.prompt}/1K tokens`,
+                  completion: `$${model.pricing.completion}/1K tokens`
+                },
+                capabilities: {
+                  functions: model.capabilities?.functions || false,
+                  tools: model.capabilities?.tools || false,
+                  vision: model.capabilities?.vision || false,
+                  json_mode: model.capabilities?.json_mode || false
+                }
+              }));
+
+            const response = {
+              id: `search-${Date.now()}`,
+              object: 'list',
+              data: searchResults,
+              created: Math.floor(Date.now() / 1000),
+              metadata: {
+                total_models: models.data.length,
+                filtered_count: searchResults.length,
+                applied_filters: {
+                  query: args.query,
+                  provider: args.provider,
+                  minContextLength: args.minContextLength,
+                  maxContextLength: args.maxContextLength,
+                  maxPromptPrice: args.maxPromptPrice,
+                  maxCompletionPrice: args.maxCompletionPrice,
+                  capabilities: args.capabilities,
+                  limit: args.limit
+                }
+              }
+            };
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(searchResults, null, 2),
+                  text: JSON.stringify(response, null, 2),
                 },
               ],
             };
@@ -479,11 +579,37 @@ class OpenRouterServer {
             };
           }
 
+          const response = {
+            id: `info-${Date.now()}`,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: modelInfo.id.split('/')[0],
+            permission: [],
+            root: modelInfo.id,
+            parent: null,
+            data: {
+              id: modelInfo.id,
+              name: modelInfo.name,
+              description: modelInfo.description || 'No description available',
+              context_length: modelInfo.context_length,
+              pricing: {
+                prompt: `$${modelInfo.pricing.prompt}/1K tokens`,
+                completion: `$${modelInfo.pricing.completion}/1K tokens`
+              },
+              capabilities: {
+                functions: modelInfo.capabilities?.functions || false,
+                tools: modelInfo.capabilities?.tools || false,
+                vision: modelInfo.capabilities?.vision || false,
+                json_mode: modelInfo.capabilities?.json_mode || false
+              }
+            }
+          };
+
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(modelInfo, null, 2),
+                text: JSON.stringify(response, null, 2),
               },
             ],
           };
@@ -493,11 +619,25 @@ class OpenRouterServer {
           const { model } = request.params.arguments as { model: string };
           const isValid = await this.modelCache.validateModel(model);
           
+          const response = {
+            id: `validate-${Date.now()}`,
+            object: 'model.validation',
+            created: Math.floor(Date.now() / 1000),
+            data: {
+              model: model,
+              valid: isValid,
+              error: isValid ? null : {
+                code: 'model_not_found',
+                message: 'The specified model was not found in the available models list'
+              }
+            }
+          };
+
           return {
             content: [
               {
                 type: 'text',
-                text: isValid ? 'Model ID is valid.' : 'Model ID is invalid.',
+                text: JSON.stringify(response, null, 2),
               },
             ],
           };
