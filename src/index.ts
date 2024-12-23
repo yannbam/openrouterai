@@ -52,36 +52,23 @@ interface RateLimitState {
 const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff delays in ms
 
 // Simple in-memory state management
-class StateManager {
-  private static instance: StateManager;
-  private defaultModel: string | undefined;
+class ModelCache {
+  private static instance: ModelCache;
   private cachedModels: CachedModelResponse | null = null;
+  private readonly cacheExpiry = 3600000; // 1 hour in milliseconds
 
   private constructor() {}
 
-  static getInstance(): StateManager {
-    if (!StateManager.instance) {
-      StateManager.instance = new StateManager();
+  static getInstance(): ModelCache {
+    if (!ModelCache.instance) {
+      ModelCache.instance = new ModelCache();
     }
-    return StateManager.instance;
+    return ModelCache.instance;
   }
 
   private validateCache(): boolean {
     if (!this.cachedModels) return false;
-    const cacheExpiry = 3600000; // 1 hour in milliseconds
-    return Date.now() - this.cachedModels.timestamp <= cacheExpiry;
-  }
-
-  setDefaultModel(model: string) {
-    this.defaultModel = model;
-  }
-
-  getDefaultModel(): string | undefined {
-    return this.defaultModel;
-  }
-
-  clearDefaultModel() {
-    this.defaultModel = undefined;
+    return Date.now() - this.cachedModels.timestamp <= this.cacheExpiry;
   }
 
   setCachedModels(models: OpenRouterModelResponse & { timestamp: number }) {
@@ -92,24 +79,26 @@ class StateManager {
     return this.validateCache() ? this.cachedModels : null;
   }
 
-  clearCachedModels() {
+  clearCache() {
     this.cachedModels = null;
   }
 
   async validateModel(model: string): Promise<boolean> {
-    const models = await this.getCachedModels();
+    const models = this.getCachedModels();
     if (!models) return false;
     return models.data.some(m => m.id === model);
   }
 
   async getModelInfo(model: string): Promise<OpenRouterModel | undefined> {
-    const models = await this.getCachedModels();
+    const models = this.getCachedModels();
     if (!models) return undefined;
     return models.data.find(m => m.id === model);
   }
 }
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const DEFAULT_MODEL = process.env.OPENROUTER_DEFAULT_MODEL;
+
 if (!OPENROUTER_API_KEY) {
   throw new Error('OPENROUTER_API_KEY environment variable is required');
 }
@@ -117,7 +106,7 @@ if (!OPENROUTER_API_KEY) {
 class OpenRouterServer {
   private server: Server;
   private openai: OpenAI;
-  private stateManager: StateManager;
+  private modelCache: ModelCache;
   private axiosInstance: AxiosInstance;
   private rateLimit: RateLimitState = {
     remaining: 50, // Default conservative value
@@ -126,7 +115,7 @@ class OpenRouterServer {
   };
 
   constructor() {
-    this.stateManager = StateManager.getInstance();
+    this.modelCache = ModelCache.getInstance();
     
     // Initialize axios instance for OpenRouter API
     this.axiosInstance = axios.create({
@@ -259,28 +248,6 @@ class OpenRouterServer {
           },
         },
         {
-          name: 'set_default_model',
-          description: 'Set the default model for subsequent chat completions',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              model: {
-                type: 'string',
-                description: 'The model ID to set as default',
-              },
-            },
-            required: ['model'],
-          },
-        },
-        {
-          name: 'clear_default_model',
-          description: 'Clear the default model setting',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-          },
-        },
-        {
           name: 'get_model_info',
           description: 'Get detailed information about a specific model',
           inputSchema: {
@@ -320,13 +287,13 @@ class OpenRouterServer {
             temperature?: number;
           };
           
-          const model = args.model || this.stateManager.getDefaultModel();
+          const model = args.model || DEFAULT_MODEL;
           if (!model) {
             return {
               content: [
                 {
                   type: 'text',
-                  text: 'No model specified and no default model set. Please specify a model or set a default model.',
+                  text: 'No model specified and no default model configured in MCP settings. Please specify a model or set OPENROUTER_DEFAULT_MODEL in the MCP configuration.',
                 },
               ],
               isError: true,
@@ -373,7 +340,7 @@ class OpenRouterServer {
             }
 
             // Use cached models if available and valid
-            let models = this.stateManager.getCachedModels();
+            let models = this.modelCache.getCachedModels();
             
             if (!models) {
               for (let i = 0; i <= RETRY_DELAYS.length; i++) {
@@ -383,7 +350,7 @@ class OpenRouterServer {
                     data: response.data.data,
                     timestamp: Date.now()
                   };
-                  this.stateManager.setCachedModels(models);
+                  this.modelCache.setCachedModels(models);
                   break;
                 } catch (error) {
                   if (i === RETRY_DELAYS.length) throw error;
@@ -438,7 +405,7 @@ class OpenRouterServer {
             }
 
             // Use cached models if available
-            let models = this.stateManager.getCachedModels();
+            let models = this.modelCache.getCachedModels();
             if (!models) {
               for (let i = 0; i <= RETRY_DELAYS.length; i++) {
                 try {
@@ -447,7 +414,7 @@ class OpenRouterServer {
                     data: response.data.data,
                     timestamp: Date.now()
                   };
-                  this.stateManager.setCachedModels(models);
+                  this.modelCache.setCachedModels(models);
                   break;
                 } catch (error) {
                   if (i === RETRY_DELAYS.length) throw error;
@@ -496,51 +463,9 @@ class OpenRouterServer {
           }
         }
 
-        case 'set_default_model': {
-          const { model } = request.params.arguments as { model: string };
-          
-          // Validate model before setting
-          const isValid = await this.stateManager.validateModel(model);
-          if (!isValid) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Invalid model ID: ${model}. Please use a valid model ID.`,
-                },
-              ],
-              isError: true,
-            };
-          }
-
-          this.stateManager.setDefaultModel(model);
-          const modelInfo = await this.stateManager.getModelInfo(model);
-          
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Default model set to: ${model}\nModel Info: ${JSON.stringify(modelInfo, null, 2)}`,
-              },
-            ],
-          };
-        }
-
-        case 'clear_default_model': {
-          this.stateManager.clearDefaultModel();
-          return {
-            content: [
-              {
-                type: 'text',
-                text: 'Default model has been cleared.',
-              },
-            ],
-          };
-        }
-
         case 'get_model_info': {
           const { model } = request.params.arguments as { model: string };
-          const modelInfo = await this.stateManager.getModelInfo(model);
+          const modelInfo = await this.modelCache.getModelInfo(model);
           
           if (!modelInfo) {
             return {
@@ -566,7 +491,7 @@ class OpenRouterServer {
 
         case 'validate_model': {
           const { model } = request.params.arguments as { model: string };
-          const isValid = await this.stateManager.validateModel(model);
+          const isValid = await this.modelCache.validateModel(model);
           
           return {
             content: [
