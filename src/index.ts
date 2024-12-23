@@ -52,36 +52,23 @@ interface RateLimitState {
 const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff delays in ms
 
 // Simple in-memory state management
-class StateManager {
-  private static instance: StateManager;
-  private defaultModel: string | undefined;
+class ModelCache {
+  private static instance: ModelCache;
   private cachedModels: CachedModelResponse | null = null;
+  private readonly cacheExpiry = 3600000; // 1 hour in milliseconds
 
   private constructor() {}
 
-  static getInstance(): StateManager {
-    if (!StateManager.instance) {
-      StateManager.instance = new StateManager();
+  static getInstance(): ModelCache {
+    if (!ModelCache.instance) {
+      ModelCache.instance = new ModelCache();
     }
-    return StateManager.instance;
+    return ModelCache.instance;
   }
 
   private validateCache(): boolean {
     if (!this.cachedModels) return false;
-    const cacheExpiry = 3600000; // 1 hour in milliseconds
-    return Date.now() - this.cachedModels.timestamp <= cacheExpiry;
-  }
-
-  setDefaultModel(model: string) {
-    this.defaultModel = model;
-  }
-
-  getDefaultModel(): string | undefined {
-    return this.defaultModel;
-  }
-
-  clearDefaultModel() {
-    this.defaultModel = undefined;
+    return Date.now() - this.cachedModels.timestamp <= this.cacheExpiry;
   }
 
   setCachedModels(models: OpenRouterModelResponse & { timestamp: number }) {
@@ -92,24 +79,26 @@ class StateManager {
     return this.validateCache() ? this.cachedModels : null;
   }
 
-  clearCachedModels() {
+  clearCache() {
     this.cachedModels = null;
   }
 
   async validateModel(model: string): Promise<boolean> {
-    const models = await this.getCachedModels();
+    const models = this.getCachedModels();
     if (!models) return false;
     return models.data.some(m => m.id === model);
   }
 
   async getModelInfo(model: string): Promise<OpenRouterModel | undefined> {
-    const models = await this.getCachedModels();
+    const models = this.getCachedModels();
     if (!models) return undefined;
     return models.data.find(m => m.id === model);
   }
 }
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const DEFAULT_MODEL = process.env.OPENROUTER_DEFAULT_MODEL;
+
 if (!OPENROUTER_API_KEY) {
   throw new Error('OPENROUTER_API_KEY environment variable is required');
 }
@@ -117,7 +106,7 @@ if (!OPENROUTER_API_KEY) {
 class OpenRouterServer {
   private server: Server;
   private openai: OpenAI;
-  private stateManager: StateManager;
+  private modelCache: ModelCache;
   private axiosInstance: AxiosInstance;
   private rateLimit: RateLimitState = {
     remaining: 50, // Default conservative value
@@ -126,7 +115,7 @@ class OpenRouterServer {
   };
 
   constructor() {
-    this.stateManager = StateManager.getInstance();
+    this.modelCache = ModelCache.getInstance();
     
     // Initialize axios instance for OpenRouter API
     this.axiosInstance = axios.create({
@@ -166,7 +155,7 @@ class OpenRouterServer {
     this.server = new Server(
       {
         name: 'openrouter-server',
-        version: '0.1.0',
+        version: '2.0.0',
       },
       {
         capabilities: {
@@ -237,47 +226,64 @@ class OpenRouterServer {
           },
         },
         {
-          name: 'list_models',
-          description: 'List all available models from OpenRouter.ai with pricing and context length',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-          },
-        },
-        {
           name: 'search_models',
-          description: 'Search for specific models by name or provider',
+          description: 'Search and filter OpenRouter.ai models based on various criteria',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: 'Search query (e.g., "gpt", "anthropic", "claude")',
+                description: 'Optional search query to filter by name, description, or provider',
               },
-            },
-            required: ['query'],
-          },
-        },
-        {
-          name: 'set_default_model',
-          description: 'Set the default model for subsequent chat completions',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              model: {
+              provider: {
                 type: 'string',
-                description: 'The model ID to set as default',
+                description: 'Filter by specific provider (e.g., "anthropic", "openai", "cohere")',
               },
-            },
-            required: ['model'],
-          },
-        },
-        {
-          name: 'clear_default_model',
-          description: 'Clear the default model setting',
-          inputSchema: {
-            type: 'object',
-            properties: {},
+              minContextLength: {
+                type: 'number',
+                description: 'Minimum context length in tokens',
+              },
+              maxContextLength: {
+                type: 'number',
+                description: 'Maximum context length in tokens',
+              },
+              maxPromptPrice: {
+                type: 'number',
+                description: 'Maximum price per 1K tokens for prompts',
+              },
+              maxCompletionPrice: {
+                type: 'number',
+                description: 'Maximum price per 1K tokens for completions',
+              },
+              capabilities: {
+                type: 'object',
+                description: 'Filter by model capabilities',
+                properties: {
+                  functions: {
+                    type: 'boolean',
+                    description: 'Requires function calling capability',
+                  },
+                  tools: {
+                    type: 'boolean',
+                    description: 'Requires tools capability',
+                  },
+                  vision: {
+                    type: 'boolean',
+                    description: 'Requires vision capability',
+                  },
+                  json_mode: {
+                    type: 'boolean',
+                    description: 'Requires JSON mode capability',
+                  }
+                }
+              },
+              limit: {
+                type: 'number',
+                description: 'Maximum number of results to return (default: 10)',
+                minimum: 1,
+                maximum: 50
+              }
+            }
           },
         },
         {
@@ -320,13 +326,13 @@ class OpenRouterServer {
             temperature?: number;
           };
           
-          const model = args.model || this.stateManager.getDefaultModel();
+          const model = args.model || DEFAULT_MODEL;
           if (!model) {
             return {
               content: [
                 {
                   type: 'text',
-                  text: 'No model specified and no default model set. Please specify a model or set a default model.',
+                  text: 'No model specified and no default model configured in MCP settings. Please specify a model or set OPENROUTER_DEFAULT_MODEL in the MCP configuration.',
                 },
               ],
               isError: true,
@@ -340,11 +346,32 @@ class OpenRouterServer {
               temperature: args.temperature ?? 1,
             });
 
+            // Format response to match OpenRouter schema
+            const response = {
+              id: `gen-${Date.now()}`,
+              choices: [{
+                finish_reason: completion.choices[0].finish_reason,
+                message: {
+                  role: completion.choices[0].message.role,
+                  content: completion.choices[0].message.content || '',
+                  tool_calls: completion.choices[0].message.tool_calls
+                }
+              }],
+              created: Math.floor(Date.now() / 1000),
+              model: model,
+              object: 'chat.completion',
+              usage: completion.usage || {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0
+              }
+            };
+
             return {
               content: [
                 {
                   type: 'text',
-                  text: completion.choices[0].message.content || '',
+                  text: JSON.stringify(response, null, 2),
                 },
               ],
             };
@@ -364,72 +391,22 @@ class OpenRouterServer {
           }
         }
 
-        case 'list_models': {
-          try {
-            // Check rate limits before making request
-            if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
-              const waitTime = this.rateLimit.reset - Date.now();
-              await setTimeout(waitTime);
-            }
-
-            // Use cached models if available and valid
-            let models = this.stateManager.getCachedModels();
-            
-            if (!models) {
-              for (let i = 0; i <= RETRY_DELAYS.length; i++) {
-                try {
-                  const response = await this.axiosInstance.get<OpenRouterModelResponse>('/models');
-                  models = {
-                    data: response.data.data,
-                    timestamp: Date.now()
-                  };
-                  this.stateManager.setCachedModels(models);
-                  break;
-                } catch (error) {
-                  if (i === RETRY_DELAYS.length) throw error;
-                  await setTimeout(RETRY_DELAYS[i]);
-                }
-              }
-            }
-
-            if (!models) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Failed to fetch models. Please try again.',
-                  },
-                ],
-                isError: true,
-              };
-            }
-
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(models.data, null, 2),
-                },
-              ],
-            };
-          } catch (error) {
-            if (error instanceof Error) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: `Failed to fetch models: ${error.message}`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-            throw error;
-          }
-        }
-
         case 'search_models': {
-          const { query } = request.params.arguments as { query: string };
+          const args = request.params.arguments as {
+            query?: string;
+            provider?: string;
+            minContextLength?: number;
+            maxContextLength?: number;
+            maxPromptPrice?: number;
+            maxCompletionPrice?: number;
+            capabilities?: {
+              functions?: boolean;
+              tools?: boolean;
+              vision?: boolean;
+              json_mode?: boolean;
+            };
+            limit?: number;
+          };
           try {
             // Check rate limits before making request
             if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
@@ -438,7 +415,7 @@ class OpenRouterServer {
             }
 
             // Use cached models if available
-            let models = this.stateManager.getCachedModels();
+            let models = this.modelCache.getCachedModels();
             if (!models) {
               for (let i = 0; i <= RETRY_DELAYS.length; i++) {
                 try {
@@ -447,7 +424,7 @@ class OpenRouterServer {
                     data: response.data.data,
                     timestamp: Date.now()
                   };
-                  this.stateManager.setCachedModels(models);
+                  this.modelCache.setCachedModels(models);
                   break;
                 } catch (error) {
                   if (i === RETRY_DELAYS.length) throw error;
@@ -461,22 +438,112 @@ class OpenRouterServer {
                 content: [
                   {
                     type: 'text',
-                    text: 'Failed to fetch models. Please try again.',
+                    text: JSON.stringify({
+                      error: {
+                        code: 'fetch_failed',
+                        message: 'Failed to fetch models. Please try again.',
+                        details: {
+                          applied_filters: {
+                            query: args.query,
+                            provider: args.provider,
+                            minContextLength: args.minContextLength,
+                            maxContextLength: args.maxContextLength,
+                            maxPromptPrice: args.maxPromptPrice,
+                            maxCompletionPrice: args.maxCompletionPrice,
+                            capabilities: args.capabilities,
+                            limit: args.limit
+                          }
+                        }
+                      }
+                    }, null, 2),
                   },
                 ],
                 isError: true,
               };
             }
 
-            const searchResults = models.data.filter(model =>
-              model.id.toLowerCase().includes(query.toLowerCase())
-            );
+            // Apply all filters
+            const searchResults = models.data
+              .filter(model => {
+                // Text search
+                if (args.query) {
+                  const searchTerm = args.query.toLowerCase();
+                  const matchesQuery = 
+                    model.id.toLowerCase().includes(searchTerm) ||
+                    (model.name && model.name.toLowerCase().includes(searchTerm)) ||
+                    (model.description && model.description.toLowerCase().includes(searchTerm));
+                  if (!matchesQuery) return false;
+                }
+
+                // Provider filter
+                if (args.provider) {
+                  const provider = model.id.split('/')[0];
+                  if (provider !== args.provider.toLowerCase()) return false;
+                }
+
+                // Context length filters
+                if (args.minContextLength && model.context_length < args.minContextLength) return false;
+                if (args.maxContextLength && model.context_length > args.maxContextLength) return false;
+
+                // Price filters
+                if (args.maxPromptPrice && parseFloat(model.pricing.prompt) > args.maxPromptPrice) return false;
+                if (args.maxCompletionPrice && parseFloat(model.pricing.completion) > args.maxCompletionPrice) return false;
+
+                // Capabilities filters
+                if (args.capabilities) {
+                  if (args.capabilities.functions && !model.capabilities?.functions) return false;
+                  if (args.capabilities.tools && !model.capabilities?.tools) return false;
+                  if (args.capabilities.vision && !model.capabilities?.vision) return false;
+                  if (args.capabilities.json_mode && !model.capabilities?.json_mode) return false;
+                }
+
+                return true;
+              })
+              // Apply limit
+              .slice(0, args.limit || 10)
+              .map(model => ({
+                id: model.id,
+                name: model.name,
+                description: model.description || 'No description available',
+                context_length: model.context_length,
+                pricing: {
+                  prompt: `$${model.pricing.prompt}/1K tokens`,
+                  completion: `$${model.pricing.completion}/1K tokens`
+                },
+                capabilities: {
+                  functions: model.capabilities?.functions || false,
+                  tools: model.capabilities?.tools || false,
+                  vision: model.capabilities?.vision || false,
+                  json_mode: model.capabilities?.json_mode || false
+                }
+              }));
+
+            const response = {
+              id: `search-${Date.now()}`,
+              object: 'list',
+              data: searchResults,
+              created: Math.floor(Date.now() / 1000),
+              metadata: {
+                total_models: models.data.length,
+                filtered_count: searchResults.length,
+                applied_filters: {
+                  query: args.query,
+                  provider: args.provider,
+                  minContextLength: args.minContextLength,
+                  maxContextLength: args.maxContextLength,
+                  maxPromptPrice: args.maxPromptPrice,
+                  maxCompletionPrice: args.maxCompletionPrice,
+                  capabilities: args.capabilities,
+                  limit: args.limit
+                }
+              }
+            };
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(searchResults, null, 2),
+                  text: JSON.stringify(response, null, 2),
                 },
               ],
             };
@@ -496,51 +563,9 @@ class OpenRouterServer {
           }
         }
 
-        case 'set_default_model': {
-          const { model } = request.params.arguments as { model: string };
-          
-          // Validate model before setting
-          const isValid = await this.stateManager.validateModel(model);
-          if (!isValid) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Invalid model ID: ${model}. Please use a valid model ID.`,
-                },
-              ],
-              isError: true,
-            };
-          }
-
-          this.stateManager.setDefaultModel(model);
-          const modelInfo = await this.stateManager.getModelInfo(model);
-          
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Default model set to: ${model}\nModel Info: ${JSON.stringify(modelInfo, null, 2)}`,
-              },
-            ],
-          };
-        }
-
-        case 'clear_default_model': {
-          this.stateManager.clearDefaultModel();
-          return {
-            content: [
-              {
-                type: 'text',
-                text: 'Default model has been cleared.',
-              },
-            ],
-          };
-        }
-
         case 'get_model_info': {
           const { model } = request.params.arguments as { model: string };
-          const modelInfo = await this.stateManager.getModelInfo(model);
+          const modelInfo = await this.modelCache.getModelInfo(model);
           
           if (!modelInfo) {
             return {
@@ -554,11 +579,37 @@ class OpenRouterServer {
             };
           }
 
+          const response = {
+            id: `info-${Date.now()}`,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: modelInfo.id.split('/')[0],
+            permission: [],
+            root: modelInfo.id,
+            parent: null,
+            data: {
+              id: modelInfo.id,
+              name: modelInfo.name,
+              description: modelInfo.description || 'No description available',
+              context_length: modelInfo.context_length,
+              pricing: {
+                prompt: `$${modelInfo.pricing.prompt}/1K tokens`,
+                completion: `$${modelInfo.pricing.completion}/1K tokens`
+              },
+              capabilities: {
+                functions: modelInfo.capabilities?.functions || false,
+                tools: modelInfo.capabilities?.tools || false,
+                vision: modelInfo.capabilities?.vision || false,
+                json_mode: modelInfo.capabilities?.json_mode || false
+              }
+            }
+          };
+
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(modelInfo, null, 2),
+                text: JSON.stringify(response, null, 2),
               },
             ],
           };
@@ -566,13 +617,27 @@ class OpenRouterServer {
 
         case 'validate_model': {
           const { model } = request.params.arguments as { model: string };
-          const isValid = await this.stateManager.validateModel(model);
+          const isValid = await this.modelCache.validateModel(model);
           
+          const response = {
+            id: `validate-${Date.now()}`,
+            object: 'model.validation',
+            created: Math.floor(Date.now() / 1000),
+            data: {
+              model: model,
+              valid: isValid,
+              error: isValid ? null : {
+                code: 'model_not_found',
+                message: 'The specified model was not found in the available models list'
+              }
+            }
+          };
+
           return {
             content: [
               {
                 type: 'text',
-                text: isValid ? 'Model ID is valid.' : 'Model ID is invalid.',
+                text: JSON.stringify(response, null, 2),
               },
             ],
           };
