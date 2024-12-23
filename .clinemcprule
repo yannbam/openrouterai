@@ -1,0 +1,77 @@
+# MCP Server Documentation Guidelines
+
+## README.md Structure
+
+1. Brief Description
+   - One-line description of the server's purpose
+   - Key features in bullet points (max 5)
+
+2. Installation
+   - NPM installation command
+   - MCP configuration JSON snippet
+   - Required environment variables explanation
+
+3. Available Tools
+   - List each tool with:
+     - Name and brief description
+     - Input schema in TypeScript/JSON
+     - Basic usage example
+
+4. Basic Configuration
+   - Essential environment variables
+   - Common configuration options
+   - Default values
+
+## CONTRIBUTING.md Structure
+
+1. Development Setup
+   - Repository cloning
+   - Dependencies installation
+   - Build instructions
+   - Test commands
+
+2. Project Structure
+   - Directory layout
+   - Key files explanation
+   - Architecture overview
+
+3. Development Guidelines
+   - Code style
+   - Git conventions
+   - Testing requirements
+   - Documentation requirements
+
+4. Detailed Features
+   - In-depth feature explanations
+   - Implementation details
+   - Performance considerations
+   - Error handling approach
+
+5. API Documentation
+   - Detailed API endpoints
+   - Response formats
+   - Error codes
+   - Rate limiting details
+
+## General Rules
+
+1. README.md
+   - Focus on installation and basic usage
+   - Keep it concise and user-focused
+   - Include only essential configuration
+   - Use clear code examples
+   - Avoid implementation details
+
+2. CONTRIBUTING.md
+   - Include all development details
+   - Provide comprehensive documentation
+   - Include architectural decisions
+   - Document internal workings
+   - Include troubleshooting guides
+
+3. Documentation Style
+   - Use consistent formatting
+   - Include TypeScript types
+   - Provide working code examples
+   - Document error scenarios
+   - Keep examples up to date
