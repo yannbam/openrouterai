@@ -26,6 +26,14 @@ This MCP server provides a unified interface for accessing various AI models thr
    - Reasoning: Consistent headers across all requests
    - Implementation: Set in constructor via defaultHeaders
 
+## Package Configuration
+1. NPM Package Setup (v2.0.1)
+   - Added binary support for CLI installation
+   - Configured files for npm publishing
+   - Set Node.js engine requirement (>=18.0.0)
+   - Added repository and documentation links
+   - Implemented prepublishOnly script for build safety
+
 ## User Interactions
 - Successfully tested with various models including:
   - anthropic/claude-3-opus-20240229

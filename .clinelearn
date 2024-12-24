@@ -2,89 +2,90 @@
 
 ## Implementation Insights
 
-1. API Integration
+1. Package Configuration
+   - Issue: Missing essential npm package configuration sections
+   - Solution: Added bin, files, repository sections and other required fields
+   - Learning: Always include complete package.json configuration for proper npm deployment
+
+2. API Integration
    - Issue: OpenAI SDK models.list() lacked OpenRouter-specific data
    - Solution: Implemented direct OpenRouter /models endpoint integration
    - Learning: Use API-specific endpoints for accurate data
 
-2. Rate Limiting
+3. Rate Limiting
    - Issue: API requests could fail during high usage
    - Solution: Implemented header-based rate tracking with exponential backoff
    - Learning: Always implement proper rate limiting for API stability
 
-3. Error Handling
+4. Error Handling
    - Issue: Generic error responses weren't helpful
    - Solution: Added structured error handling with specific messages
    - Learning: Provide detailed error context for better debugging
 
-4. Model Management
+5. Model Management
    - Issue: Model capabilities weren't properly tracked
    - Solution: Added comprehensive model interface with capability tracking
    - Learning: Design interfaces to capture all API-specific features
 
-5. State Management
-   - Issue: Cache invalidation wasn't properly handled
-   - Solution: Implemented timed cache with validation
-   - Learning: Always include cache invalidation strategy
-
 ## Common Pitfalls
 
-1. Rate Limits
+1. NPM Package Configuration
+   - Pitfall: Incomplete package.json configuration
+   - Solution: Added all required sections for npm deployment
+   - Prevention: Reference complete package.json templates
+
+2. Rate Limits
    - Pitfall: Not handling rate limits properly
    - Solution: Implemented header tracking and automatic waiting
    - Prevention: Monitor and respect API rate limits
 
-2. API Response Types
+3. API Response Types
    - Pitfall: Incorrect assumptions about response structure
    - Solution: Created comprehensive type interfaces
    - Prevention: Validate API responses against documentation
 
-3. Cache Management
+4. Cache Management
    - Pitfall: Stale data causing inconsistencies
    - Solution: Added cache expiration and validation
    - Prevention: Implement proper cache lifecycle
 
-4. Error Recovery
+5. Error Recovery
    - Pitfall: Failed requests not properly retried
    - Solution: Added exponential backoff strategy
    - Prevention: Always implement retry logic for API calls
 
-5. Model Capabilities
-   - Pitfall: Not checking model-specific features
-   - Solution: Added capability validation
-   - Prevention: Track and verify model capabilities
-
 ## Best Practices Identified
 
-1. API Integration
+1. Package Configuration
+   - Include complete metadata (repository, bugs, homepage)
+   - Configure binary for CLI installation
+   - Specify required Node.js version
+   - List published files explicitly
+   - Add prepublishOnly script for build safety
+
+2. API Integration
    - Use API-specific endpoints for accurate data
    - Implement proper rate limiting
    - Handle retries with exponential backoff
    - Validate responses against types
 
-2. Error Management
+3. Error Management
    - Provide detailed error context
    - Implement proper retry strategies
    - Log errors for debugging
    - Return structured error responses
 
-3. State Management
+4. State Management
    - Use singleton pattern for consistency
    - Implement proper cache invalidation
    - Validate state changes
    - Track resource usage
 
-4. Performance
+5. Performance
    - Cache frequently accessed data
    - Implement efficient retry strategies
    - Use proper typing for runtime checks
    - Optimize API request patterns
-
-5. Model Management
-   - Track model capabilities
-   - Validate before operations
-   - Cache model information
-   - Handle API-specific features
 
 ## Future Improvements Identified
 
