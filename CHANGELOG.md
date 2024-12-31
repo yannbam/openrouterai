@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - openai to ^4.77.0
   - typescript to ^5.7.2
 - Updated .gitignore file list
+- Fixed package.json bin configuration format
 ### Added
 - Package overrides to fix punycode deprecation warning:
   - Added uri-js-replace to replace deprecated uri-js

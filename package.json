@@ -4,7 +4,7 @@
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "openrouterai": "./build/index.js"
+    "openrouterai": "build/index.js"
   },
   "files": [
     "build",
