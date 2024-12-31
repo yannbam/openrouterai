@@ -1,6 +1,6 @@
 {
   "name": "@mcpservers/openrouterai",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -29,22 +29,26 @@
   "description": "MCP server for OpenRouter.ai integration",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mcpservers/openrouterai.git"
+    "url": "git+https://github.com/heltonteixeira/openrouterai.git"
   },
   "bugs": {
-    "url": "https://github.com/mcpservers/openrouterai/issues"
+    "url": "https://github.com/heltonteixeira/openrouterai/issues"
   },
-  "homepage": "https://github.com/mcpservers/openrouterai#readme",
+  "homepage": "https://github.com/heltonteixeira/openrouterai#readme",
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.0.4",
-    "axios": "^1.6.2",
-    "openai": "^4.0.0",
-    "typescript": "^5.0.0"
+    "axios": "^1.7.9",
+    "openai": "^4.77.0",
+    "typescript": "^5.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2"
+  },
+  "overrides": {
+    "uri-js": "npm:uri-js-replace",
+    "whatwg-url": "^14.1.0"
   }
 }

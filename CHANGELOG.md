@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2024-03-22
+### Changed
+- Updated dependencies to latest versions:
+  - axios to ^1.7.9
+  - openai to ^4.77.0
+  - typescript to ^5.7.2
+- Updated .gitignore file list
+### Added
+- Package overrides to fix punycode deprecation warning:
+  - Added uri-js-replace to replace deprecated uri-js
+  - Updated whatwg-url to v14.1.0
+### Fixed
+- Updated repository URLs to correct GitHub repository
+- Fixed Node.js punycode deprecation warning (DEP0040)
+
 ## [2.0.2] - 2024-03-21
 ### Changed
 - Simplified binary name to 'openrouterai'
