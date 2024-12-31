@@ -1,14 +1,28 @@
 # OpenRouter MCP Server
 
-A Model Context Protocol (MCP) server that provides integration with OpenRouter.ai, allowing access to various AI models through a unified interface.
+[![MCP Server](https://img.shields.io/badge/MCP-Server-green)](https://github.com/heltonteixeira/openrouterai)
+[![Version](https://img.shields.io/badge/version-2.0.3-blue)](CHANGELOG.md)
+[![TypeScript](https://img.shields.io/badge/language-TypeScript-blue)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-brightgreen)](LICENSE)
+
+A Model Context Protocol (MCP) server providing seamless integration with OpenRouter.ai's diverse model ecosystem. Access various AI models through a unified, type-safe interface with built-in caching, rate limiting, and error handling.
 
 ## Features
 
-- Access to all OpenRouter.ai models through MCP tools
-- Advanced model search and filtering capabilities
-- Automatic rate limiting and error handling
-- Model information caching for optimal performance
-- Comprehensive model capability tracking
+- **Model Access**
+  - Direct access to all OpenRouter.ai models
+  - Automatic model validation and capability checking
+  - Default model configuration support
+
+- **Performance Optimization**
+  - Smart model information caching (1-hour expiry)
+  - Automatic rate limit management
+  - Exponential backoff for failed requests
+
+- **Robust Error Handling**
+  - Detailed error messages with context
+  - Rate limit detection and recovery
+  - Network timeout handling with retries
 
 ## Installation
 
@@ -18,7 +32,14 @@ npm install @mcpservers/openrouterai
 
 ## Configuration
 
-Add the server to your MCP settings configuration file (`cline_mcp_settings.json` or `claude_desktop_config.json`):
+### Prerequisites
+
+1. Get your OpenRouter API key from [OpenRouter Keys](https://openrouter.ai/keys)
+2. Choose a default model (optional)
+
+### Setup
+
+Add to your MCP settings configuration file (`cline_mcp_settings.json` or `claude_desktop_config.json`):
 
 ```json
 {
@@ -35,10 +56,6 @@ Add the server to your MCP settings configuration file (`cline_mcp_settings.json
 }
 ```
 
-Required environment variables:
-- `OPENROUTER_API_KEY`: Your OpenRouter API key (get one at https://openrouter.ai/keys)
-- `OPENROUTER_DEFAULT_MODEL` (optional): Default model to use for chat completions
-
 ## Available Tools
 
 ### chat_completion
@@ -50,7 +67,7 @@ Send messages to OpenRouter.ai models:
     role: "system" | "user" | "assistant";
     content: string;
   }[];
-  temperature?: number;    // Optional, defaults to 1.0
+  temperature?: number;    // Optional (0-2), defaults to 1.0
 }
 ```
 
@@ -65,10 +82,10 @@ Search and filter available models:
   maxPromptPrice?: number;
   maxCompletionPrice?: number;
   capabilities?: {
-    functions?: boolean;
-    tools?: boolean;
-    vision?: boolean;
-    json_mode?: boolean;
+    functions?: boolean;   // Function calling support
+    tools?: boolean;       // Tool use support
+    vision?: boolean;      // Image processing support
+    json_mode?: boolean;   // JSON mode support
   };
   limit?: number;          // Default: 10, max: 50
 }
@@ -90,4 +107,36 @@ Check if a model ID is valid:
 }
 ```
 
-For detailed documentation, development setup, and implementation details, see [CONTRIBUTING.md](CONTRIBUTING.md).
+## Rate Limiting
+
+The server implements intelligent rate limit handling:
+- Tracks remaining requests through response headers
+- Automatically waits when rate limits are reached
+- Implements exponential backoff for failed requests
+- Provides clear error messages for rate limit issues
+
+## Error Handling
+
+The server uses `McpError` for MCP-specific errors with clear messages:
+- Invalid model errors
+- API rate limiting
+- Authentication issues
+- Network errors
+- Invalid parameter errors
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed information about:
+- Development setup
+- Project structure
+- Feature implementation
+- Error handling guidelines
+- Tool usage examples
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and migration guides.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
