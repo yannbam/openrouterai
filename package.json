@@ -2,20 +2,19 @@
   "name": "@mcpservers/openrouterai",
   "version": "2.0.3",
   "type": "module",
-  "main": "build/index.js",
+  "main": "dist/index.js",
   "bin": {
-    "openrouterai": "build/index.js"
+    "openrouterai": "dist/index.js"
   },
   "files": [
-    "build",
+    "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "start": "node build/index.js",
-    "dev": "tsc -w",
-    "prepublishOnly": "npm run build"
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
   },
   "keywords": [
     "mcp",
@@ -39,13 +38,14 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.0.4",
-    "axios": "^1.7.9",
-    "openai": "^4.77.0",
-    "typescript": "^5.7.2"
+    "@modelcontextprotocol/sdk": "1.0.4"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "axios": "^1.7.9",
+    "openai": "^4.77.0",
+    "shx": "^0.3.4",
+    "typescript": "^5.7.2"
   },
   "overrides": {
     "uri-js": "npm:uri-js-replace",
