@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import { setTimeout } from 'timers/promises';
-import { OpenRouterModelResponse } from './model-cache';
+import { OpenRouterModelResponse } from './model-cache.js';
 
 export interface RateLimitState {
   remaining: number;

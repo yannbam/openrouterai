@@ -1,10 +1,45 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
 
+// Maximum context tokens (matches tool-handlers.ts)
+const MAX_CONTEXT_TOKENS = 200000;
+
 export interface ChatCompletionToolRequest {
   model?: string;
   messages: ChatCompletionMessageParam[];
   temperature?: number;
+}
+
+// Utility function to estimate token count (simplified)
+function estimateTokenCount(text: string): number {
+  // Rough approximation: 4 characters per token
+  return Math.ceil(text.length / 4);
+}
+
+// Truncate messages to fit within the context window
+function truncateMessagesToFit(
+  messages: ChatCompletionMessageParam[], 
+  maxTokens: number
+): ChatCompletionMessageParam[] {
+  const truncated: ChatCompletionMessageParam[] = [];
+  let currentTokenCount = 0;
+
+  // Always include system message first if present
+  if (messages[0]?.role === 'system') {
+    truncated.push(messages[0]);
+    currentTokenCount += estimateTokenCount(messages[0].content as string);
+  }
+
+  // Add messages from the end, respecting the token limit
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const messageTokens = estimateTokenCount(messages[i].content as string);
+    if (currentTokenCount + messageTokens > maxTokens) break;
+
+    truncated.unshift(messages[i]);
+    currentTokenCount += messageTokens;
+  }
+
+  return truncated;
 }
 
 export async function handleChatCompletion(
@@ -14,6 +49,7 @@ export async function handleChatCompletion(
 ) {
   const args = request.params.arguments;
   
+  // Validate model selection
   const model = args.model || defaultModel;
   if (!model) {
     return {
@@ -27,10 +63,26 @@ export async function handleChatCompletion(
     };
   }
 
+  // Validate message array
+  if (args.messages.length === 0) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: 'Messages array cannot be empty. At least one message is required.',
+        },
+      ],
+      isError: true,
+    };
+  }
+
   try {
+    // Truncate messages to fit within context window
+    const truncatedMessages = truncateMessagesToFit(args.messages, MAX_CONTEXT_TOKENS);
+
     const completion = await openai.chat.completions.create({
       model,
-      messages: args.messages,
+      messages: truncatedMessages,
       temperature: args.temperature ?? 1,
     });
 

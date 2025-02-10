@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-import { ToolHandlers } from './tool-handlers';
+import { ToolHandlers } from './tool-handlers.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const DEFAULT_MODEL = process.env.OPENROUTER_DEFAULT_MODEL;

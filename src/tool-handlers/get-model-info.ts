@@ -1,4 +1,4 @@
-import { ModelCache } from '../model-cache';
+import { ModelCache } from '../model-cache.js';
 
 export interface GetModelInfoToolRequest {
   model: string;

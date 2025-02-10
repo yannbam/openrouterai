@@ -1,5 +1,5 @@
-import { ModelCache, OpenRouterModel } from '../model-cache';
-import { OpenRouterAPIClient } from '../openrouter-api';
+import { ModelCache, OpenRouterModel } from '../model-cache.js';
+import { OpenRouterAPIClient } from '../openrouter-api.js';
 
 export interface SearchModelsToolRequest {
   query?: string;
@@ -29,7 +29,9 @@ export async function handleSearchModels(
     let models = modelCache.getCachedModels();
     if (!models) {
       models = await apiClient.fetchModels();
-      modelCache.setCachedModels(models);
+      if (models) {
+        modelCache.setCachedModels({ ...models, timestamp: Date.now() });
+      }
     }
 
     if (!models) {

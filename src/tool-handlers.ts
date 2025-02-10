@@ -7,12 +7,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import OpenAI from 'openai';
 
-import { ModelCache } from './model-cache';
-import { OpenRouterAPIClient } from './openrouter-api';
-import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers/chat-completion';
-import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models';
-import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info';
-import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model';
+import { ModelCache } from './model-cache.js';
+import { OpenRouterAPIClient } from './openrouter-api.js';
+import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers/chat-completion.js';
+import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models.js';
+import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info.js';
+import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model.js';
 
 export class ToolHandlers {
   private server: Server;
@@ -58,6 +58,9 @@ export class ToolHandlers {
               },
               messages: {
                 type: 'array',
+                description: 'An array of conversation messages with roles and content',
+                minItems: 1,
+                maxItems: 100,
                 items: {
                   type: 'object',
                   properties: {
@@ -72,9 +75,7 @@ export class ToolHandlers {
                     },
                   },
                   required: ['role', 'content'],
-                },
-                description: 'The conversation messages',
-              },
+                }              },
               temperature: {
                 type: 'number',
                 description: 'Sampling temperature (0-2)',
@@ -84,6 +85,8 @@ export class ToolHandlers {
             },
             required: ['messages'],
           },
+          // Context window management details can be added as a separate property
+           maxContextTokens: 200000
         },
         {
           name: 'search_models',
