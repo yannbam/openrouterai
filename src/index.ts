@@ -2,6 +2,9 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
+import { ListResourcesRequestSchema, ListPromptsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+
+
 import { ToolHandlers } from './tool-handlers.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -23,7 +26,9 @@ class OpenRouterServer {
       },
       {
         capabilities: {
-          tools: {},
+              tools: {listChanged: true},
+              resources: {listChanged: true},  // to prevent method not found error
+              prompts: {listChanged: true},    // to prevent method not found error
         },
       }
     );
@@ -34,7 +39,21 @@ class OpenRouterServer {
       OPENROUTER_API_KEY!, 
       DEFAULT_MODEL
     );
-    
+
+    // Add list request handlers to avoid method not found in case of polling    
+    this.server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
+      return {
+        resources: []
+      };
+    });
+
+    this.server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
+      return {
+        prompts: []
+      };
+    });
+
+
     // Error handling
     this.server.onerror = (error) => console.error('[MCP Error]', error);
     process.on('SIGINT', async () => {
