@@ -38,7 +38,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.4.1",
+    "@modelcontextprotocol/sdk": "^1.7.0",
     "axios": "^1.7.9",
     "openai": "^4.83.0",
     "typescript": "^5.7.3"
