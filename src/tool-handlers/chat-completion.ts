@@ -1,12 +1,15 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+import { ConversationManager } from '../conversation-manager';
+import { ConversationMessage } from '../conversation';
 
 // Maximum context tokens (matches tool-handlers.ts)
 const MAX_CONTEXT_TOKENS = 200000;
 
 export interface ChatCompletionToolRequest {
+  conversationId?: string; // New field
   model?: string;
-  messages: ChatCompletionMessageParam[];
+  messages: ChatCompletionMessageParam[]; // This type comes from OpenAI SDK
   temperature?: number;
 }
 
@@ -48,7 +51,10 @@ export async function handleChatCompletion(
   defaultModel?: string
 ) {
   const args = request.params.arguments;
-  
+  const convManager = ConversationManager.getInstance();
+  let returnedConversationId: string | undefined = args.conversationId;
+  let messagesForOpenAI: ChatCompletionMessageParam[];
+
   // Validate model selection
   const model = args.model || defaultModel;
   if (!model) {
@@ -60,6 +66,7 @@ export async function handleChatCompletion(
         },
       ],
       isError: true,
+      conversationId: args.conversationId,
     };
   }
 
@@ -73,18 +80,78 @@ export async function handleChatCompletion(
         },
       ],
       isError: true,
+      conversationId: args.conversationId,
     };
+  }
+
+  if (args.conversationId) {
+    const conversation = convManager.getConversation(args.conversationId);
+    if (!conversation) {
+      return {
+        content: [{ type: 'text', text: `Conversation with ID ${args.conversationId} not found.` }],
+        isError: true,
+        conversationId: args.conversationId,
+      };
+    }
+    // Map stored ConversationMessage to ChatCompletionMessageParam for OpenAI
+    const historyMessages = conversation.history.map(m => ({
+      role: m.role as 'user' | 'system' | 'assistant' | 'tool', // Cast needed
+      content: m.content
+    } as ChatCompletionMessageParam));
+    messagesForOpenAI = [...historyMessages, ...args.messages];
+    returnedConversationId = args.conversationId;
+  } else {
+    messagesForOpenAI = args.messages;
+    // For new conversations, ID is set after successful creation.
   }
 
   try {
     // Truncate messages to fit within context window
-    const truncatedMessages = truncateMessagesToFit(args.messages, MAX_CONTEXT_TOKENS);
+    const truncatedMessages = truncateMessagesToFit(messagesForOpenAI, MAX_CONTEXT_TOKENS);
 
     const completion = await openai.chat.completions.create({
       model,
       messages: truncatedMessages,
       temperature: args.temperature ?? 1,
     });
+
+    const assistantResponseContent = completion.choices[0].message.content || '';
+    const assistantRole = completion.choices[0].message.role; // This is 'assistant'
+
+    if (args.conversationId) {
+      // Add the new user messages from args.messages to history
+      args.messages.forEach(msg => {
+        convManager.addMessageToConversation(args.conversationId!, {
+          role: msg.role as 'user' | 'system' | 'assistant', // OpenAI's role type
+          content: msg.content as string, // OpenAI's content type
+          timestamp: new Date().toISOString(),
+        });
+      });
+      // Add assistant's response to history
+      convManager.addMessageToConversation(args.conversationId!, {
+        role: assistantRole,
+        content: assistantResponseContent,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      const newConversation = convManager.createConversation();
+      returnedConversationId = newConversation.id; // Set the ID for return
+
+      // Add user's original messages from args.messages to new conversation's history
+      args.messages.forEach(msg => {
+        convManager.addMessageToConversation(newConversation.id, {
+          role: msg.role as 'user' | 'system' | 'assistant', // OpenAI's role type
+          content: msg.content as string, // OpenAI's content type
+          timestamp: new Date().toISOString(),
+        });
+      });
+      // Add assistant's response to new conversation's history
+      convManager.addMessageToConversation(newConversation.id, {
+        role: assistantRole,
+        content: assistantResponseContent,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // Format response to match OpenRouter schema
     const response = {
@@ -111,9 +178,10 @@ export async function handleChatCompletion(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(response, null, 2),
+          text: JSON.stringify(response, null, 2), // 'response' is the formatted OpenAI completion
         },
       ],
+      conversationId: returnedConversationId, // Add this field
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -125,6 +193,7 @@ export async function handleChatCompletion(
           },
         ],
         isError: true,
+        conversationId: returnedConversationId, // Include here
       };
     }
     throw error;

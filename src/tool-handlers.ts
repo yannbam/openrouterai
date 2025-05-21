@@ -1,18 +1,26 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
+  CallToolRequest,
   ErrorCode,
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import OpenAI from 'openai';
 
+import { ConversationManager } from './conversation-manager';
+// ConversationMessage is not directly used, but Conversation is for type hints if needed.
+// For now, direct usage is within ConversationManager.
+// import { ConversationMessage, Conversation } from './conversation';
 import { ModelCache } from './model-cache.js';
 import { OpenRouterAPIClient } from './openrouter-api.js';
 import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers/chat-completion.js';
 import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models.js';
 import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info.js';
 import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model.js';
+import { handleListConversations, ListConversationsToolRequest } from './tool-handlers/list-conversations';
+import { handleGetConversationHistory, GetConversationHistoryToolRequest } from './tool-handlers/get-conversation-history';
+import { handleDeleteConversation, DeleteConversationToolRequest } from './tool-handlers/delete-conversation';
 
 export class ToolHandlers {
   private server: Server;
@@ -46,12 +54,17 @@ export class ToolHandlers {
   private setupToolHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
+        // Note: The inputSchema for chat_completion already includes conversationId
         {
           name: 'chat_completion',
           description: 'Send a message to OpenRouter.ai and get a response',
           inputSchema: {
             type: 'object',
             properties: {
+              conversationId: {
+                type: 'string',
+                description: 'Optional ID of an existing conversation to continue.',
+              },
               model: {
                 type: 'string',
                 description: 'The model to use (e.g., "google/gemini-2.0-flash-thinking-exp:free", "undi95/toppy-m-7b:free"). If not provided, uses the default model if set.',
@@ -177,45 +190,155 @@ export class ToolHandlers {
             required: ['model'],
           },
         },
+        {
+          name: 'list_conversations',
+          description: 'Lists all available conversations.',
+          inputSchema: {
+            type: 'object',
+            properties: {}, // Explicitly empty
+          },
+        },
+        {
+          name: 'get_conversation_history',
+          description: 'Gets the message history for a specific conversation.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              conversationId: {
+                type: 'string',
+                description: 'The ID of the conversation to retrieve.',
+              },
+            },
+            required: ['conversationId'],
+          },
+        },
+        {
+          name: 'delete_conversation',
+          description: 'Deletes a specific conversation and its history.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              conversationId: {
+                type: 'string',
+                description: 'The ID of the conversation to delete.',
+              },
+            },
+            required: ['conversationId'],
+          },
+        },
       ],
     }));
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      switch (request.params.name) {
+    this.server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
+      const convManager = ConversationManager.getInstance();
+      // Extract conversationId from request.params.
+      // The 'as any' is used because CallToolRequest.params is strictly typed by SDK.
+      const conversationId = (request.params as any).conversationId as string | undefined;
+      let result: any; // To store the result from tool handlers
+
+      const toolName = request.params.name;
+      const toolArguments = request.params.arguments;
+
+      // Log tool call if conversationId is valid and tool is not chat_completion
+      if (conversationId && toolName !== 'chat_completion') {
+        const conversation = convManager.getConversation(conversationId);
+        if (conversation) {
+          convManager.addMessageToConversation(conversationId, {
+            role: 'tool',
+            content: `Tool call: ${toolName} with arguments: ${JSON.stringify(toolArguments)}`,
+            timestamp: new Date().toISOString(),
+            toolName: toolName,
+          });
+        } else {
+          console.warn(`Conversation with ID ${conversationId} not found for tool call logging.`);
+        }
+      }
+
+      switch (toolName) {
         case 'chat_completion':
-          return handleChatCompletion({
+          // handleChatCompletion manages its own conversation logging.
+          // The conversationId from arguments is passed to it directly.
+          result = await handleChatCompletion({
             params: {
-              arguments: request.params.arguments as unknown as ChatCompletionToolRequest
+              arguments: toolArguments as unknown as ChatCompletionToolRequest
             }
           }, this.openai, this.defaultModel);
+          // No generic tool result logging for chat_completion here.
+          return result; // Early return for chat_completion
         
         case 'search_models':
-          return handleSearchModels({
+          result = await handleSearchModels({
             params: {
-              arguments: request.params.arguments as SearchModelsToolRequest
+              arguments: toolArguments as SearchModelsToolRequest
             }
           }, this.apiClient, this.modelCache);
+          break;
         
         case 'get_model_info':
-          return handleGetModelInfo({
+          result = await handleGetModelInfo({
             params: {
-              arguments: request.params.arguments as unknown as GetModelInfoToolRequest
+              arguments: toolArguments as unknown as GetModelInfoToolRequest
             }
           }, this.modelCache);
+          break;
         
         case 'validate_model':
-          return handleValidateModel({
+          result = await handleValidateModel({
             params: {
-              arguments: request.params.arguments as unknown as ValidateModelToolRequest
+              arguments: toolArguments as unknown as ValidateModelToolRequest
             }
           }, this.modelCache);
+          break;
         
+        case 'list_conversations':
+          result = await handleListConversations(); // No arguments passed
+          break;
+        
+        case 'get_conversation_history':
+          result = await handleGetConversationHistory({
+            params: {
+              arguments: toolArguments as GetConversationHistoryToolRequest
+            }
+          });
+          break;
+        
+        case 'delete_conversation':
+          result = await handleDeleteConversation({
+            params: {
+              arguments: toolArguments as DeleteConversationToolRequest
+            }
+          });
+          break;
+
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
-            `Unknown tool: ${request.params.name}`
+            `Unknown tool: ${toolName}`
           );
       }
+
+      // Log tool result if conversationId is valid and tool is not chat_completion
+      if (conversationId && toolName !== 'chat_completion') {
+        const conversation = convManager.getConversation(conversationId); // Re-check conversation
+        if (conversation) {
+          let resultContent = '';
+          if (result.content && result.content.length > 0 && result.content[0].type === 'text') {
+            resultContent = result.content[0].text;
+          } else {
+            resultContent = JSON.stringify(result); // Fallback
+          }
+
+          convManager.addMessageToConversation(conversationId, {
+            role: 'tool',
+            content: `Tool result: ${toolName} completed. Output: ${resultContent}`,
+            timestamp: new Date().toISOString(),
+            toolName: toolName,
+            // TODO: Consider adding a flag if result.isError is true, e.g. toolCallFailed: result.isError
+          });
+        }
+        // console.warn for not found already handled above or implicitly if conv is null
+      }
+      return result;
     });
   }
 }
