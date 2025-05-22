@@ -56,8 +56,8 @@ export class ToolHandlers {
       tools: [
         // Note: The inputSchema for chat_completion already includes conversationId
         {
-          name: 'chat_completion',
-          description: 'Send a message to OpenRouter.ai and get a response',
+          name: 'ai-chat_completion',
+          description: 'Send a message to an AI model and get a response',
           inputSchema: {
             type: 'object',
             properties: {
@@ -102,7 +102,7 @@ export class ToolHandlers {
            maxContextTokens: 200000
         },
         {
-          name: 'search_models',
+          name: 'ai-chat_search_models',
           description: 'Search and filter OpenRouter.ai models based on various criteria',
           inputSchema: {
             type: 'object',
@@ -163,7 +163,7 @@ export class ToolHandlers {
           },
         },
         {
-          name: 'get_model_info',
+          name: 'ai-chat_get_model_info',
           description: 'Get detailed information about a specific model',
           inputSchema: {
             type: 'object',
@@ -177,7 +177,7 @@ export class ToolHandlers {
           },
         },
         {
-          name: 'validate_model',
+          name: 'ai-chat_validate_model',
           description: 'Check if a model ID is valid',
           inputSchema: {
             type: 'object',
@@ -191,7 +191,7 @@ export class ToolHandlers {
           },
         },
         {
-          name: 'list_conversations',
+          name: 'ai-chat_list_conversations',
           description: 'Lists all available conversations.',
           inputSchema: {
             type: 'object',
@@ -199,7 +199,7 @@ export class ToolHandlers {
           },
         },
         {
-          name: 'get_conversation_history',
+          name: 'ai-chat_get_conversation_history',
           description: 'Gets the message history for a specific conversation.',
           inputSchema: {
             type: 'object',
@@ -213,7 +213,7 @@ export class ToolHandlers {
           },
         },
         {
-          name: 'delete_conversation',
+          name: 'ai-chat_delete_conversation',
           description: 'Deletes a specific conversation and its history.',
           inputSchema: {
             type: 'object',
@@ -256,7 +256,7 @@ export class ToolHandlers {
       }
 
       switch (toolName) {
-        case 'chat_completion':
+        case 'ai-chat_completion':
           // handleChatCompletion manages its own conversation logging.
           // The conversationId from arguments is passed to it directly.
           result = await handleChatCompletion({
@@ -267,7 +267,7 @@ export class ToolHandlers {
           // No generic tool result logging for chat_completion here.
           return result; // Early return for chat_completion
         
-        case 'search_models':
+        case 'ai-chat_search_models':
           result = await handleSearchModels({
             params: {
               arguments: toolArguments as SearchModelsToolRequest
@@ -275,7 +275,7 @@ export class ToolHandlers {
           }, this.apiClient, this.modelCache);
           break;
         
-        case 'get_model_info':
+        case 'ai-chat_get_model_info':
           result = await handleGetModelInfo({
             params: {
               arguments: toolArguments as unknown as GetModelInfoToolRequest
@@ -283,7 +283,7 @@ export class ToolHandlers {
           }, this.modelCache);
           break;
         
-        case 'validate_model':
+        case 'ai-chat_validate_model':
           result = await handleValidateModel({
             params: {
               arguments: toolArguments as unknown as ValidateModelToolRequest
@@ -291,11 +291,11 @@ export class ToolHandlers {
           }, this.modelCache);
           break;
         
-        case 'list_conversations':
+        case 'ai-chat_list_conversations':
           result = await handleListConversations(); // No arguments passed
           break;
         
-        case 'get_conversation_history':
+        case 'ai-chat_get_conversation_history':
           result = await handleGetConversationHistory({
             params: {
               arguments: toolArguments as unknown as GetConversationHistoryToolRequest
@@ -303,7 +303,7 @@ export class ToolHandlers {
           });
           break;
         
-        case 'delete_conversation':
+        case 'ai-chat_delete_conversation':
           result = await handleDeleteConversation({
             params: {
               arguments: toolArguments as unknown as DeleteConversationToolRequest
