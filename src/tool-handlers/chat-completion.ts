@@ -178,10 +178,10 @@ export async function handleChatCompletion(
       content: [
         {
           type: 'text',
-          text: JSON.stringify(response, null, 2), // 'response' is the formatted OpenAI completion
+          text: `conversationId: ${returnedConversationId}\n\n` + JSON.stringify(response, null, 2), // 'response' is the formatted OpenAI completion
         },
       ],
-      conversationId: returnedConversationId, // Add this field
+      // conversationId: returnedConversationId, // Add this field
     };
   } catch (error) {
     if (error instanceof Error) {

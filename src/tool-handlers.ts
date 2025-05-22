@@ -63,7 +63,7 @@ export class ToolHandlers {
             properties: {
               conversationId: {
                 type: 'string',
-                description: 'Optional ID of an existing conversation to continue.',
+                description: 'Optional ID of an existing conversation to continue. When an ID is provided, the conversation history will be prepended and you only need to set the new user message in the messages argument!',
               },
               model: {
                 type: 'string',
