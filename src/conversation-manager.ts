@@ -1,5 +1,5 @@
 // src/conversation-manager.ts
-import { Conversation, ConversationMessage } from './conversation';
+import { Conversation, ConversationMessage } from './conversation.js';
 import { randomUUID } from 'crypto'; // For generating unique IDs
 
 export class ConversationManager {

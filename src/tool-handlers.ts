@@ -8,19 +8,19 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import OpenAI from 'openai';
 
-import { ConversationManager } from './conversation-manager';
+import { ConversationManager } from './conversation-manager.js';
 // ConversationMessage is not directly used, but Conversation is for type hints if needed.
 // For now, direct usage is within ConversationManager.
-// import { ConversationMessage, Conversation } from './conversation';
+// import { ConversationMessage, Conversation } from './conversation.js';
 import { ModelCache } from './model-cache.js';
 import { OpenRouterAPIClient } from './openrouter-api.js';
 import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers/chat-completion.js';
 import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models.js';
 import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info.js';
 import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model.js';
-import { handleListConversations, ListConversationsToolRequest } from './tool-handlers/list-conversations';
-import { handleGetConversationHistory, GetConversationHistoryToolRequest } from './tool-handlers/get-conversation-history';
-import { handleDeleteConversation, DeleteConversationToolRequest } from './tool-handlers/delete-conversation';
+import { handleListConversations, ListConversationsToolRequest } from './tool-handlers/list-conversations.js';
+import { handleGetConversationHistory, GetConversationHistoryToolRequest } from './tool-handlers/get-conversation-history.js';
+import { handleDeleteConversation, DeleteConversationToolRequest } from './tool-handlers/delete-conversation.js';
 
 export class ToolHandlers {
   private server: Server;
@@ -239,8 +239,9 @@ export class ToolHandlers {
       const toolName = request.params.name;
       const toolArguments = request.params.arguments;
 
-      // Log tool call if conversationId is valid and tool is not chat_completion
-      if (conversationId && toolName !== 'chat_completion') {
+      // Log tool call if conversationId is valid
+      // (toolName !== 'chat_completion' is implicitly true here due to early return in chat_completion case)
+      if (conversationId) {
         const conversation = convManager.getConversation(conversationId);
         if (conversation) {
           convManager.addMessageToConversation(conversationId, {
@@ -297,7 +298,7 @@ export class ToolHandlers {
         case 'get_conversation_history':
           result = await handleGetConversationHistory({
             params: {
-              arguments: toolArguments as GetConversationHistoryToolRequest
+              arguments: toolArguments as unknown as GetConversationHistoryToolRequest
             }
           });
           break;
@@ -305,7 +306,7 @@ export class ToolHandlers {
         case 'delete_conversation':
           result = await handleDeleteConversation({
             params: {
-              arguments: toolArguments as DeleteConversationToolRequest
+              arguments: toolArguments as unknown as DeleteConversationToolRequest
             }
           });
           break;
@@ -317,8 +318,9 @@ export class ToolHandlers {
           );
       }
 
-      // Log tool result if conversationId is valid and tool is not chat_completion
-      if (conversationId && toolName !== 'chat_completion') {
+      // Log tool result if conversationId is valid
+      // (toolName !== 'chat_completion' is implicitly true here due to early return in chat_completion case)
+      if (conversationId) {
         const conversation = convManager.getConversation(conversationId); // Re-check conversation
         if (conversation) {
           let resultContent = '';

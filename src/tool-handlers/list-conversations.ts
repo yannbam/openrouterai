@@ -1,5 +1,5 @@
 // src/tool-handlers/list-conversations.ts
-import { ConversationManager } from '../conversation-manager';
+import { ConversationManager } from '../conversation-manager.js';
 
 export interface ListConversationsToolRequest {} // No specific arguments needed
 

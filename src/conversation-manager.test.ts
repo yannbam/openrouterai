@@ -1,6 +1,10 @@
 // src/conversation-manager.test.ts
-import { ConversationManager } from './conversation-manager';
-import { ConversationMessage } from './conversation';
+import { ConversationManager } from './conversation-manager.js';
+import { ConversationMessage, Conversation } from './conversation.js';
+
+interface ConversationSummary extends Partial<Conversation> {
+  messageCount?: number;
+}
 
 // Helper for simple assertions
 function assert(condition: boolean, message: string) {
@@ -25,6 +29,7 @@ console.log('Running ConversationManager Tests...');
   // For now, we'll delete conversations created during tests.
 
   let conversationIds: string[] = []; // To track created conversations for cleanup
+  let list: ConversationSummary[] = []; // Use the new interface
 
   // 2. Create Conversation
   const conv1 = instance1.createConversation();
@@ -60,18 +65,18 @@ console.log('Running ConversationManager Tests...');
   console.log('✓ Add Message to Conversation Test Passed');
 
   // 5. List Conversations
-  let list = instance1.listConversations();
+  list = instance1.listConversations() as ConversationSummary[];
   // We have conv1 and conv2
   assert(list.length >= 2, 'List conversations should return at least two conversations created in tests'); 
-  const conv1Summary = list.find(c => c.id === conv1.id);
+  const conv1Summary = list.find((c: ConversationSummary) => c.id === conv1.id);
   assert(conv1Summary !== undefined, 'conv1 should be in the list');
   assert(conv1Summary?.messageCount === 1, 'conv1 summary should show 1 message');
 
   // Create another one for more robust list testing
   const conv3 = instance1.createConversation();
   conversationIds.push(conv3.id);
-  list = instance1.listConversations();
-  assert(list.some(c => c.id === conv3.id), 'Newly created conv3 should be in the list');
+  list = instance1.listConversations() as ConversationSummary[];
+  assert(list.some((c: ConversationSummary) => c.id === conv3.id), 'Newly created conv3 should be in the list');
   console.log('✓ List Conversations Test Passed');
 
 
@@ -79,8 +84,8 @@ console.log('Running ConversationManager Tests...');
   const deleteResult = instance1.deleteConversation(conv1.id);
   assert(deleteResult === true, 'Deleting an existing conversation should return true');
   assert(instance1.getConversation(conv1.id) === undefined, 'Deleted conversation should not be retrievable');
-  list = instance1.listConversations();
-  assert(!list.some(c => c.id === conv1.id), 'Deleted conv1 should not be in the list');
+  list = instance1.listConversations() as ConversationSummary[];
+  assert(!list.some((c: ConversationSummary) => c.id === conv1.id), 'Deleted conv1 should not be in the list');
   
   const deleteNonExistentResult = instance1.deleteConversation('non-existent-id-for-delete');
   assert(deleteNonExistentResult === false, 'Deleting a non-existent conversation should return false');
@@ -96,11 +101,11 @@ console.log('Running ConversationManager Tests...');
   
   // Filter out successfully deleted IDs from conversationIds array
   // to check if any persist.
-  const remainingTestConvIds = conversationIds.filter(id => instance1.getConversation(id) !== undefined);
-  const finalList = instance1.listConversations();
+  const remainingTestConvIds = conversationIds.filter((id: string) => instance1.getConversation(id) !== undefined);
+  const finalList = instance1.listConversations() as ConversationSummary[];
   
   // Check if any of the initial test conversation IDs are still present in the list.
-  const testConversationsStillPresent = finalList.filter(c => remainingTestConvIds.includes(c.id!));
+  const testConversationsStillPresent = finalList.filter((c: ConversationSummary) => remainingTestConvIds.includes(c.id!));
   assert(testConversationsStillPresent.length === 0, 'All test conversations should be cleaned up and not present in the final list.');
 
   console.log('All ConversationManager Tests Passed!');

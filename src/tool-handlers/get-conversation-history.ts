@@ -1,5 +1,5 @@
 // src/tool-handlers/get-conversation-history.ts
-import { ConversationManager } from '../conversation-manager';
+import { ConversationManager } from '../conversation-manager.js';
 
 export interface GetConversationHistoryToolRequest {
   conversationId: string;

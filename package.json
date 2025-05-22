@@ -40,12 +40,13 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
     "axios": "^1.7.9",
-    "openai": "^4.83.0",
-    "typescript": "^5.7.3"
+    "openai": "^4.83.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
-    "shx": "^0.3.4"
+    "shx": "^0.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "overrides": {
     "uri-js": "npm:uri-js-replace",

@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
-import { ConversationManager } from '../conversation-manager';
-import { ConversationMessage } from '../conversation';
+import { ConversationManager } from '../conversation-manager.js';
+import { ConversationMessage } from '../conversation.js';
 
 // Maximum context tokens (matches tool-handlers.ts)
 const MAX_CONTEXT_TOKENS = 200000;
@@ -94,7 +94,7 @@ export async function handleChatCompletion(
       };
     }
     // Map stored ConversationMessage to ChatCompletionMessageParam for OpenAI
-    const historyMessages = conversation.history.map(m => ({
+    const historyMessages = conversation.history.map((m: ConversationMessage) => ({
       role: m.role as 'user' | 'system' | 'assistant' | 'tool', // Cast needed
       content: m.content
     } as ChatCompletionMessageParam));

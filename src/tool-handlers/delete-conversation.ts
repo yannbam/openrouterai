@@ -1,5 +1,5 @@
 // src/tool-handlers/delete-conversation.ts
-import { ConversationManager } from '../conversation-manager';
+import { ConversationManager } from '../conversation-manager.js';
 
 export interface DeleteConversationToolRequest {
   conversationId: string;
