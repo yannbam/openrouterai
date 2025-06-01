@@ -173,6 +173,33 @@ export class OpenRouterAPIClient {
     return response;
   }
 
+  async fetchModelEndpoints(model: string) {
+    // Check rate limits before making request
+    if (this.rateLimit.remaining <= 0 && Date.now() < this.rateLimit.reset) {
+      const waitTime = this.rateLimit.reset - Date.now();
+      await setTimeout(waitTime);
+    }
+
+    // Parse model ID into author/slug format for the endpoint
+    const [author, slug] = model.split('/', 2);
+    if (!author || !slug) {
+      throw new Error(`Invalid model format. Expected 'author/slug', got '${model}'`);
+    }
+
+    // Retry mechanism for fetching model endpoints
+    for (let i = 0; i <= RETRY_DELAYS.length; i++) {
+      try {
+        const response = await this.axiosInstance.get(`/models/${author}/${slug}/endpoints`);
+        return response.data;
+      } catch (error) {
+        if (i === RETRY_DELAYS.length) throw error;
+        await setTimeout(RETRY_DELAYS[i]);
+      }
+    }
+
+    throw new Error('Failed to fetch model endpoints after multiple attempts');
+  }
+
   getRateLimit(): RateLimitState {
     return { ...this.rateLimit };
   }

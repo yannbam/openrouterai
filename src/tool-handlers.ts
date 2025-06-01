@@ -17,6 +17,7 @@ import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers
 import { handleTextCompletion, TextCompletionToolRequest } from './tool-handlers/text-completion.js';
 import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models.js';
 import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info.js';
+import { handleGetModelProviders, GetModelProvidersToolRequest } from './tool-handlers/get-model-providers.js';
 import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model.js';
 import { handleListConversations, ListConversationsToolRequest } from './tool-handlers/list-conversations.js';
 import { handleGetConversationHistory, GetConversationHistoryToolRequest } from './tool-handlers/get-conversation-history.js';
@@ -235,6 +236,20 @@ export class ToolHandlers {
           },
         },
         {
+          name: 'ai-get_model_providers',
+          description: 'Get live provider endpoint information for a specific model, including pricing, quantization, and availability',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              model: {
+                type: 'string',
+                description: 'The model ID to get provider information for',
+              },
+            },
+            required: ['model'],
+          },
+        },
+        {
           name: 'ai-chat_validate_model',
           description: 'Check if a model ID is valid',
           inputSchema: {
@@ -349,6 +364,14 @@ export class ToolHandlers {
               arguments: toolArguments as unknown as GetModelInfoToolRequest
             }
           }, this.modelCache, this.apiClient);
+          break;
+        
+        case 'ai-get_model_providers':
+          result = await handleGetModelProviders({
+            params: {
+              arguments: toolArguments as unknown as GetModelProvidersToolRequest
+            }
+          }, this.apiClient);
           break;
         
         case 'ai-chat_validate_model':
