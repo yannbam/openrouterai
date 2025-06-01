@@ -95,6 +95,13 @@ export class ToolHandlers {
                 type: 'number',
                 description: 'Random seed for deterministic generation (optional)',
               },
+              providers: {
+                type: 'array',
+                description: 'Optional list of provider names to use (e.g., ["hyperbolic", "openai"]). By default, OpenRouter automatically chooses the best available provider. When specified, only these providers will be used, with fallbacks disabled.',
+                items: {
+                  type: 'string'
+                }
+              },
               additionalParams: {
                 type: 'object',
                 description: 'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.',
@@ -144,6 +151,13 @@ export class ToolHandlers {
               seed: {
                 type: 'number',
                 description: 'Random seed for deterministic generation (optional).',
+              },
+              providers: {
+                type: 'array',
+                description: 'Optional list of provider names to use (e.g., ["hyperbolic", "openai"]). By default, OpenRouter automatically chooses the best available provider. When specified, only these providers will be used, with fallbacks disabled.',
+                items: {
+                  type: 'string'
+                }
               },
               additionalParams: {
                 type: 'object',

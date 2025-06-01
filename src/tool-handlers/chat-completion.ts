@@ -17,6 +17,7 @@ export interface ChatCompletionToolRequest {
   temperature?: number;
   max_tokens?: number;
   seed?: number;
+  providers?: string[]; // New field for provider selection
   additionalParams?: Record<string, string | number | boolean>;
 }
 
@@ -134,6 +135,7 @@ export async function handleChatCompletion(
       temperature: args.temperature,
       max_tokens: args.max_tokens,
       seed: args.seed,
+      providers: args.providers,
       additionalParams: args.additionalParams,
     });
 

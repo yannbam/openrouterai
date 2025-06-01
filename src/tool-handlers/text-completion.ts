@@ -9,6 +9,7 @@ export interface TextCompletionToolRequest {
   max_tokens?: number;
   temperature?: number;
   seed?: number;
+  providers?: string[]; // New field for provider selection
   additionalParams?: Record<string, string | number | boolean>;
 }
 
@@ -74,6 +75,7 @@ export async function handleTextCompletion(
       max_tokens: args.max_tokens,
       temperature: args.temperature,
       seed: args.seed,
+      providers: args.providers,
       additionalParams: args.additionalParams,
     };
 

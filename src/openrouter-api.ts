@@ -86,6 +86,7 @@ export class OpenRouterAPIClient {
     temperature?: number,
     max_tokens?: number,
     seed?: number,
+    providers?: string[],
     additionalParams?: Record<string, string | number | boolean>
   }) {
     const requestBody: any = {
@@ -102,6 +103,14 @@ export class OpenRouterAPIClient {
     }
     if (params.seed !== undefined) {
       requestBody.seed = params.seed;
+    }
+
+    // Add provider routing if specified
+    if (params.providers && params.providers.length > 0) {
+      requestBody.provider = {
+        order: params.providers,
+        allow_fallbacks: false
+      };
     }
 
     // Merge additional parameters
@@ -133,6 +142,7 @@ export class OpenRouterAPIClient {
     max_tokens?: number,
     temperature?: number,
     seed?: number,
+    providers?: string[],
     additionalParams?: Record<string, string | number | boolean>
   }) {
     const requestBody: any = {
@@ -148,6 +158,14 @@ export class OpenRouterAPIClient {
     }
     if (params.seed !== undefined) {
       requestBody.seed = params.seed;
+    }
+
+    // Add provider routing if specified
+    if (params.providers && params.providers.length > 0) {
+      requestBody.provider = {
+        order: params.providers,
+        allow_fallbacks: false
+      };
     }
 
     // Spread additional parameters at top level, not nested
