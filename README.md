@@ -1,7 +1,7 @@
 # OpenRouter MCP Server
 
 [![MCP Server](https://img.shields.io/badge/MCP-Server-green)](https://github.com/heltonteixeira/openrouterai)
-[![Version](https://img.shields.io/badge/version-2.0.3-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue)](CHANGELOG.md)
 [![TypeScript](https://img.shields.io/badge/language-TypeScript-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-brightgreen)](LICENSE)
 
@@ -96,6 +96,39 @@ The tool returns a standard chat completion response from the OpenRouter API, al
 }
 ```
 If `conversationId` is provided in the input, the conversation's existing history will be automatically prepended to the `messages` for the API call. The new user messages and the assistant's response will be appended to this conversation's history. If no `conversationId` is provided, a new conversation is created, and its ID is returned in the `conversationId` field of the output.
+
+### ai-text_completion
+Generate text completion from a prompt using OpenRouter.ai models.
+
+**Input:**
+```typescript
+{
+  conversationId?: string; // Optional: ID of an existing conversation to continue
+  model: string;           // Required: Model identifier
+  prompt: string;          // Required: The text prompt to complete
+  max_tokens?: number;     // Optional: Maximum tokens to generate
+  temperature?: number;    // Optional: Sampling temperature (0-2)
+  seed?: number;          // Optional: Random seed for deterministic generation
+}
+```
+
+**Output:**
+Returns just the completion text with clean formatting.
+```typescript
+{
+  content: [
+    {
+      type: 'text',
+      text: 'conversationId: xyz\n\nThe completion text...'
+    }
+  ],
+  isError?: boolean;     // True if an error occurred
+}
+```
+
+**Conversation Continuation:** When a `conversationId` is provided, the new prompt will be appended to the last assistant response from that conversation, enabling seamless text continuation.
+
+**Note on "Looming":** For generating alternative conversation branches, the typical workflow involves: 1) generating multiple completions of the same prompt and choosing which branch to continue, and 2) slightly editing or cropping the response before feeding it back as input.
 
 ### Logging Tool Calls to Conversations
 

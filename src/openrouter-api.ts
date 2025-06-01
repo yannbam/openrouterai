@@ -92,6 +92,31 @@ export class OpenRouterAPIClient {
     });
   }
 
+  async textCompletion(params: {
+    model: string,
+    prompt: string,
+    max_tokens?: number,
+    temperature?: number,
+    seed?: number
+  }) {
+    const requestBody: any = {
+      model: params.model,
+      prompt: params.prompt,
+    };
+
+    if (params.max_tokens !== undefined) {
+      requestBody.max_tokens = params.max_tokens;
+    }
+    if (params.temperature !== undefined) {
+      requestBody.temperature = params.temperature;
+    }
+    if (params.seed !== undefined) {
+      requestBody.seed = params.seed;
+    }
+
+    return this.axiosInstance.post('/completions', requestBody);
+  }
+
   getRateLimit(): RateLimitState {
     return { ...this.rateLimit };
   }

@@ -1,15 +1,19 @@
-import OpenAI from 'openai';
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
 import { ConversationManager } from '../conversation-manager.js';
 import { ConversationMessage } from '../conversation.js';
+import { OpenRouterAPIClient } from '../openrouter-api.js';
 
 // Maximum context tokens (matches tool-handlers.ts)
 const MAX_CONTEXT_TOKENS = 200000;
 
+export interface ChatCompletionMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string;
+}
+
 export interface ChatCompletionToolRequest {
   conversationId?: string; // New field
   model?: string;
-  messages: ChatCompletionMessageParam[]; // This type comes from OpenAI SDK
+  messages: ChatCompletionMessage[];
   temperature?: number;
 }
 
@@ -21,21 +25,21 @@ function estimateTokenCount(text: string): number {
 
 // Truncate messages to fit within the context window
 function truncateMessagesToFit(
-  messages: ChatCompletionMessageParam[], 
+  messages: ChatCompletionMessage[], 
   maxTokens: number
-): ChatCompletionMessageParam[] {
-  const truncated: ChatCompletionMessageParam[] = [];
+): ChatCompletionMessage[] {
+  const truncated: ChatCompletionMessage[] = [];
   let currentTokenCount = 0;
 
   // Always include system message first if present
   if (messages[0]?.role === 'system') {
     truncated.push(messages[0]);
-    currentTokenCount += estimateTokenCount(messages[0].content as string);
+    currentTokenCount += estimateTokenCount(messages[0].content);
   }
 
   // Add messages from the end, respecting the token limit
   for (let i = messages.length - 1; i >= 0; i--) {
-    const messageTokens = estimateTokenCount(messages[i].content as string);
+    const messageTokens = estimateTokenCount(messages[i].content);
     if (currentTokenCount + messageTokens > maxTokens) break;
 
     truncated.unshift(messages[i]);
@@ -47,13 +51,13 @@ function truncateMessagesToFit(
 
 export async function handleChatCompletion(
   request: { params: { arguments: ChatCompletionToolRequest } },
-  openai: OpenAI,
+  apiClient: OpenRouterAPIClient,
   defaultModel?: string
 ) {
   const args = request.params.arguments;
   const convManager = ConversationManager.getInstance();
   let returnedConversationId: string | undefined = args.conversationId;
-  let messagesForOpenAI: ChatCompletionMessageParam[];
+  let messagesForAPI: ChatCompletionMessage[];
 
   // Validate model selection
   const model = args.model || defaultModel;
@@ -93,28 +97,40 @@ export async function handleChatCompletion(
         conversationId: args.conversationId,
       };
     }
-    // Map stored ConversationMessage to ChatCompletionMessageParam for OpenAI
+    // Map stored ConversationMessage to ChatCompletionMessage for API
     const historyMessages = conversation.history.map((m: ConversationMessage) => ({
-      role: m.role as 'user' | 'system' | 'assistant' | 'tool', // Cast needed
+      role: m.role as 'user' | 'system' | 'assistant' | 'tool',
       content: m.content
-    } as ChatCompletionMessageParam));
-    messagesForOpenAI = [...historyMessages, ...args.messages];
+    } as ChatCompletionMessage));
+    messagesForAPI = [...historyMessages, ...args.messages];
     returnedConversationId = args.conversationId;
   } else {
-    messagesForOpenAI = args.messages;
+    messagesForAPI = args.messages;
     // For new conversations, ID is set after successful creation.
   }
 
   try {
     // Truncate messages to fit within context window
-    const truncatedMessages = truncateMessagesToFit(messagesForOpenAI, MAX_CONTEXT_TOKENS);
+    const truncatedMessages = truncateMessagesToFit(messagesForAPI, MAX_CONTEXT_TOKENS);
 
-    const completion = await openai.chat.completions.create({
+    // Debug logging when DEBUG environment variable is set
+    if (process.env.DEBUG === '1') {
+      console.error('[DEBUG] Chat Completion API Request:', JSON.stringify({
+        model,
+        messages: truncatedMessages,
+        temperature: args.temperature ?? 1,
+      }, null, 2));
+      console.error('[DEBUG] Original messages count:', args.messages.length);
+      console.error('[DEBUG] Final messages count (with history + truncation):', truncatedMessages.length);
+    }
+
+    const response = await apiClient.chatCompletion({
       model,
       messages: truncatedMessages,
       temperature: args.temperature ?? 1,
     });
 
+    const completion = response.data;
     const assistantResponseContent = completion.choices[0].message.content || '';
     const assistantRole = completion.choices[0].message.role; // This is 'assistant'
 
@@ -122,8 +138,8 @@ export async function handleChatCompletion(
       // Add the new user messages from args.messages to history
       args.messages.forEach(msg => {
         convManager.addMessageToConversation(args.conversationId!, {
-          role: msg.role as 'user' | 'system' | 'assistant', // OpenAI's role type
-          content: msg.content as string, // OpenAI's content type
+          role: msg.role,
+          content: msg.content,
           timestamp: new Date().toISOString(),
         });
       });
@@ -140,8 +156,8 @@ export async function handleChatCompletion(
       // Add user's original messages from args.messages to new conversation's history
       args.messages.forEach(msg => {
         convManager.addMessageToConversation(newConversation.id, {
-          role: msg.role as 'user' | 'system' | 'assistant', // OpenAI's role type
-          content: msg.content as string, // OpenAI's content type
+          role: msg.role,
+          content: msg.content,
           timestamp: new Date().toISOString(),
         });
       });
@@ -154,7 +170,7 @@ export async function handleChatCompletion(
     }
 
     // Format response to match OpenRouter schema
-    const response = {
+    const formattedResponse = {
       id: `gen-${Date.now()}`,
       choices: [{
         finish_reason: completion.choices[0].finish_reason,
@@ -178,7 +194,7 @@ export async function handleChatCompletion(
       content: [
         {
           type: 'text',
-          text: `conversationId: ${returnedConversationId}\n\n` + JSON.stringify(response, null, 2), // 'response' is the formatted OpenAI completion
+          text: `conversationId: ${returnedConversationId}\n\n` + JSON.stringify(formattedResponse, null, 2),
         },
       ],
       // conversationId: returnedConversationId, // Add this field

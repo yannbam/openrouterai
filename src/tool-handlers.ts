@@ -6,7 +6,6 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
-import OpenAI from 'openai';
 
 import { ConversationManager } from './conversation-manager.js';
 // ConversationMessage is not directly used, but Conversation is for type hints if needed.
@@ -15,6 +14,7 @@ import { ConversationManager } from './conversation-manager.js';
 import { ModelCache } from './model-cache.js';
 import { OpenRouterAPIClient } from './openrouter-api.js';
 import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers/chat-completion.js';
+import { handleTextCompletion, TextCompletionToolRequest } from './tool-handlers/text-completion.js';
 import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models.js';
 import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info.js';
 import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model.js';
@@ -24,7 +24,6 @@ import { handleDeleteConversation, DeleteConversationToolRequest } from './tool-
 
 export class ToolHandlers {
   private server: Server;
-  private openai: OpenAI;
   private modelCache: ModelCache;
   private apiClient: OpenRouterAPIClient;
   private defaultModel?: string;
@@ -38,15 +37,6 @@ export class ToolHandlers {
     this.modelCache = ModelCache.getInstance();
     this.apiClient = new OpenRouterAPIClient(apiKey);
     this.defaultModel = defaultModel;
-
-    this.openai = new OpenAI({
-      apiKey: apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
-      defaultHeaders: {
-        'HTTP-Referer': 'https://github.com/heltonteixeira/openrouterai',
-        'X-Title': 'MCP OpenRouter Server',
-      },
-    });
 
     this.setupToolHandlers();
   }
@@ -100,6 +90,43 @@ export class ToolHandlers {
           },
           // Context window management details can be added as a separate property
            maxContextTokens: 200000
+        },
+        {
+          name: 'ai-text_completion',
+          description: 'Generate text completion from a prompt using OpenRouter.ai models. Supports conversation continuation by appending new prompts to previous responses. Note: For "looming" (generating alternative conversation branches), you typically: 1) generate multiple continuations of the same prompt and choose which branch to continue, and 2) slightly edit or crop the response before feeding it back as input.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              conversationId: {
+                type: 'string',
+                description: 'Optional ID of an existing conversation to continue. When provided, the new prompt will be appended to the last assistant response.',
+              },
+              model: {
+                type: 'string',
+                description: 'The model to use for text completion (e.g., "meta-llama/llama-3.1-405b:free").',
+              },
+              prompt: {
+                type: 'string',
+                description: 'The text prompt to complete.',
+              },
+              max_tokens: {
+                type: 'number',
+                description: 'Maximum number of tokens to generate (optional).',
+                minimum: 1,
+              },
+              temperature: {
+                type: 'number',
+                description: 'Sampling temperature (0-2, optional).',
+                minimum: 0,
+                maximum: 2,
+              },
+              seed: {
+                type: 'number',
+                description: 'Random seed for deterministic generation (optional).',
+              },
+            },
+            required: ['model', 'prompt'],
+          },
         },
         {
           name: 'ai-chat_search_models',
@@ -263,9 +290,19 @@ export class ToolHandlers {
             params: {
               arguments: toolArguments as unknown as ChatCompletionToolRequest
             }
-          }, this.openai, this.defaultModel);
+          }, this.apiClient, this.defaultModel);
           // No generic tool result logging for chat_completion here.
           return result; // Early return for chat_completion
+        
+        case 'ai-text_completion':
+          // handleTextCompletion manages its own conversation logging.
+          result = await handleTextCompletion({
+            params: {
+              arguments: toolArguments as unknown as TextCompletionToolRequest
+            }
+          }, this.apiClient);
+          // No generic tool result logging for text_completion here.
+          return result; // Early return for text_completion
         
         case 'ai-chat_search_models':
           result = await handleSearchModels({

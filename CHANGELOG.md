@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-06-01
+### Added
+- New `ai-text_completion` tool for text completion using OpenRouter's `/completion` endpoint
+- Support for conversation continuation in text completion (appending prompts to previous responses)
+- Text completion tool supports `model` (required), `prompt` (required), `max_tokens`, `temperature`, and `seed` parameters
+- Documentation about "looming" technique for generating alternative conversation branches
+- Added `textCompletion` method to `OpenRouterAPIClient` class for consistent API handling
+
 ## [2.1.0] - 2025-02-10
 ### Added
 - Conversation context support
