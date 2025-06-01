@@ -92,6 +92,7 @@ export class OpenRouterAPIClient {
     const requestBody: any = {
       model: params.model,
       messages: params.messages,
+      transforms: [], // Prevent OpenRouter from automatically removing content
     };
 
     // Only include optional parameters if they are provided
@@ -148,6 +149,7 @@ export class OpenRouterAPIClient {
     const requestBody: any = {
       model: params.model,
       prompt: params.prompt,
+      transforms: [], // Prevent OpenRouter from automatically removing content
     };
 
     if (params.max_tokens !== undefined) {
