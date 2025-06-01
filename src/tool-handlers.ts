@@ -385,7 +385,7 @@ export class ToolHandlers {
             params: {
               arguments: toolArguments as unknown as GetModelProvidersToolRequest
             }
-          }, this.apiClient);
+          }, this.apiClient, this.modelCache);
           break;
         
         case 'ai-chat_validate_model':
