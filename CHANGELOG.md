@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-06-01
+### Added
+- **Extensible parameters support**: New `additionalParams` argument for both completion tools
+  - Accepts key-value pairs for any OpenRouter API parameter not explicitly defined
+  - Supports string, number, and boolean values with type preservation
+  - Parameters are unpacked to top-level of API request (not nested)
+  - Enables use of provider-specific parameters like `stop`, `echo`, `top_p`, `frequency_penalty`
+  - Tested and confirmed working with OpenAI models via OpenRouter
+
+### Improved
+- **Enhanced debug logging**: Cleaner debug output showing actual API request bodies
+- **Better development experience**: Removed redundant debug messages
+- **Provider flexibility**: Users can now experiment with any supported OpenRouter parameters
+
 ## [2.2.0] - 2025-06-01
 ### Added
 - New `ai-text_completion` tool for text completion using OpenRouter's `/completion` endpoint

@@ -85,6 +85,26 @@ export class ToolHandlers {
                 minimum: 0,
                 maximum: 2,
               },
+              max_tokens: {
+                type: 'number',
+                description: 'Maximum number of tokens to generate (optional)',
+                minimum: 1,
+              },
+              seed: {
+                type: 'number',
+                description: 'Random seed for deterministic generation (optional)',
+              },
+              additionalParams: {
+                type: 'object',
+                description: 'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.',
+                additionalProperties: {
+                  oneOf: [
+                    { type: 'string' },
+                    { type: 'number' },
+                    { type: 'boolean' }
+                  ]
+                }
+              },
             },
             required: ['messages'],
           },
@@ -123,6 +143,17 @@ export class ToolHandlers {
               seed: {
                 type: 'number',
                 description: 'Random seed for deterministic generation (optional).',
+              },
+              additionalParams: {
+                type: 'object',
+                description: 'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.',
+                additionalProperties: {
+                  oneOf: [
+                    { type: 'string' },
+                    { type: 'number' },
+                    { type: 'boolean' }
+                  ]
+                }
               },
             },
             required: ['model', 'prompt'],

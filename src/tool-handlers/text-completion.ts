@@ -9,6 +9,7 @@ export interface TextCompletionToolRequest {
   max_tokens?: number;
   temperature?: number;
   seed?: number;
+  additionalParams?: Record<string, string | number | boolean>;
 }
 
 export async function handleTextCompletion(
@@ -73,13 +74,12 @@ export async function handleTextCompletion(
       max_tokens: args.max_tokens,
       temperature: args.temperature,
       seed: args.seed,
+      additionalParams: args.additionalParams,
     };
 
     // Debug logging when DEBUG environment variable is set
     if (process.env.DEBUG === '1') {
-      console.error('[DEBUG] Text Completion API Request:', JSON.stringify(requestParams, null, 2));
-      console.error('[DEBUG] Original prompt:', JSON.stringify(args.prompt));
-      console.error('[DEBUG] Final prompt (with continuation):', JSON.stringify(finalPrompt));
+      console.error('[DEBUG] Text Completion Tool Handler - Input params:', JSON.stringify(requestParams, null, 2));
     }
 
     const response = await apiClient.textCompletion(requestParams);

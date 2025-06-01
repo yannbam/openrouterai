@@ -15,6 +15,9 @@ export interface ChatCompletionToolRequest {
   model?: string;
   messages: ChatCompletionMessage[];
   temperature?: number;
+  max_tokens?: number;
+  seed?: number;
+  additionalParams?: Record<string, string | number | boolean>;
 }
 
 // Utility function to estimate token count (simplified)
@@ -115,19 +118,23 @@ export async function handleChatCompletion(
 
     // Debug logging when DEBUG environment variable is set
     if (process.env.DEBUG === '1') {
-      console.error('[DEBUG] Chat Completion API Request:', JSON.stringify({
+      console.error('[DEBUG] Chat Completion Tool Handler - Input params:', JSON.stringify({
         model,
-        messages: truncatedMessages,
-        temperature: args.temperature ?? 1,
+        messagesCount: truncatedMessages.length,
+        temperature: args.temperature,
+        max_tokens: args.max_tokens,
+        seed: args.seed,
+        additionalParams: args.additionalParams,
       }, null, 2));
-      console.error('[DEBUG] Original messages count:', args.messages.length);
-      console.error('[DEBUG] Final messages count (with history + truncation):', truncatedMessages.length);
     }
 
     const response = await apiClient.chatCompletion({
       model,
       messages: truncatedMessages,
-      temperature: args.temperature ?? 1,
+      temperature: args.temperature,
+      max_tokens: args.max_tokens,
+      seed: args.seed,
+      additionalParams: args.additionalParams,
     });
 
     const completion = response.data;

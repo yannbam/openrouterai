@@ -83,13 +83,38 @@ export class OpenRouterAPIClient {
   async chatCompletion(params: {
     model: string, 
     messages: any[], 
-    temperature?: number
+    temperature?: number,
+    max_tokens?: number,
+    seed?: number,
+    additionalParams?: Record<string, string | number | boolean>
   }) {
-    return this.axiosInstance.post('/chat/completions', {
+    const requestBody: any = {
       model: params.model,
       messages: params.messages,
-      temperature: params.temperature ?? 1
-    });
+    };
+
+    // Only include optional parameters if they are provided
+    if (params.temperature !== undefined) {
+      requestBody.temperature = params.temperature;
+    }
+    if (params.max_tokens !== undefined) {
+      requestBody.max_tokens = params.max_tokens;
+    }
+    if (params.seed !== undefined) {
+      requestBody.seed = params.seed;
+    }
+
+    // Merge additional parameters
+    if (params.additionalParams) {
+      Object.assign(requestBody, params.additionalParams);
+    }
+
+    // Debug logging to show actual request body
+    if (process.env.DEBUG === '1') {
+      console.error('[DEBUG] Actual API Request Body (chatCompletion):', JSON.stringify(requestBody, null, 2));
+    }
+
+    return this.axiosInstance.post('/chat/completions', requestBody);
   }
 
   async textCompletion(params: {
@@ -97,7 +122,8 @@ export class OpenRouterAPIClient {
     prompt: string,
     max_tokens?: number,
     temperature?: number,
-    seed?: number
+    seed?: number,
+    additionalParams?: Record<string, string | number | boolean>
   }) {
     const requestBody: any = {
       model: params.model,
@@ -112,6 +138,16 @@ export class OpenRouterAPIClient {
     }
     if (params.seed !== undefined) {
       requestBody.seed = params.seed;
+    }
+
+    // Spread additional parameters at top level, not nested
+    if (params.additionalParams) {
+      Object.assign(requestBody, params.additionalParams);
+    }
+
+    // Debug logging to show actual request body
+    if (process.env.DEBUG === '1') {
+      console.error('[DEBUG] Actual API Request Body (textCompletion):', JSON.stringify(requestBody, null, 2));
     }
 
     return this.axiosInstance.post('/completions', requestBody);
