@@ -114,7 +114,17 @@ export class OpenRouterAPIClient {
       console.error('[DEBUG] Actual API Request Body (chatCompletion):', JSON.stringify(requestBody, null, 2));
     }
 
-    return this.axiosInstance.post('/chat/completions', requestBody);
+    const response = await this.axiosInstance.post('/chat/completions', requestBody);
+
+    // Debug logging to show complete raw API response
+    if (process.env.DEBUG === '1') {
+      console.error('[DEBUG] Complete API Response (chatCompletion):');
+      console.error('[DEBUG] Response Status:', response.status, response.statusText);
+      console.error('[DEBUG] Response Headers:', JSON.stringify(response.headers, null, 2));
+      console.error('[DEBUG] Response Data:', JSON.stringify(response.data, null, 2));
+    }
+
+    return response;
   }
 
   async textCompletion(params: {
@@ -150,7 +160,17 @@ export class OpenRouterAPIClient {
       console.error('[DEBUG] Actual API Request Body (textCompletion):', JSON.stringify(requestBody, null, 2));
     }
 
-    return this.axiosInstance.post('/completions', requestBody);
+    const response = await this.axiosInstance.post('/completions', requestBody);
+
+    // Debug logging to show complete raw API response
+    if (process.env.DEBUG === '1') {
+      console.error('[DEBUG] Complete API Response (textCompletion):');
+      console.error('[DEBUG] Response Status:', response.status, response.statusText);
+      console.error('[DEBUG] Response Headers:', JSON.stringify(response.headers, null, 2));
+      console.error('[DEBUG] Response Data:', JSON.stringify(response.data, null, 2));
+    }
+
+    return response;
   }
 
   getRateLimit(): RateLimitState {
