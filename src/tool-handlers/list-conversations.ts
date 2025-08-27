@@ -3,9 +3,8 @@ import { ConversationManager } from '../conversation-manager.js';
 
 export interface ListConversationsToolRequest {} // No specific arguments needed
 
-export async function handleListConversations(
+export async function handleListConversations() {
   // request: { params: { arguments: ListConversationsToolRequest } } // No args needed
-) {
   const convManager = ConversationManager.getInstance();
   try {
     const conversations = convManager.listConversations(); // This returns Partial<Conversation>[]

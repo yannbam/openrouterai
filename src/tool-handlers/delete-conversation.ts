@@ -5,9 +5,9 @@ export interface DeleteConversationToolRequest {
   conversationId: string;
 }
 
-export async function handleDeleteConversation(
-  request: { params: { arguments: DeleteConversationToolRequest } }
-) {
+export async function handleDeleteConversation(request: {
+  params: { arguments: DeleteConversationToolRequest };
+}) {
   const convManager = ConversationManager.getInstance();
   const { conversationId } = request.params.arguments;
 
@@ -22,7 +22,12 @@ export async function handleDeleteConversation(
     const deleted = convManager.deleteConversation(conversationId);
     if (!deleted) {
       return {
-        content: [{ type: 'text', text: `Error: Conversation with ID "${conversationId}" not found or could not be deleted.` }],
+        content: [
+          {
+            type: 'text',
+            text: `Error: Conversation with ID "${conversationId}" not found or could not be deleted.`,
+          },
+        ],
         isError: true, // Or false, depending on whether "not found" is an error for delete
       };
     }
