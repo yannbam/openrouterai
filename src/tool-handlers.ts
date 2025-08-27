@@ -102,6 +102,11 @@ export class ToolHandlers {
                   type: 'string'
                 }
               },
+              reasoning: {
+                type: 'string',
+                description: 'Reasoning level for models that support reasoning (optional). Controls how much reasoning the model does internally before responding. Default: "medium". Set to "none" to disable reasoning.',
+                enum: ['none', 'low', 'medium', 'high']
+              },
               additionalParams: {
                 type: 'object',
                 description: 'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.',

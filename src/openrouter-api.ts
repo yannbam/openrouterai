@@ -87,6 +87,7 @@ export class OpenRouterAPIClient {
     max_tokens?: number,
     seed?: number,
     providers?: string[],
+    reasoning?: "none" | "low" | "medium" | "high",
     additionalParams?: Record<string, string | number | boolean>
   }) {
     const requestBody: any = {
@@ -94,6 +95,14 @@ export class OpenRouterAPIClient {
       messages: params.messages,
       transforms: [], // Prevent OpenRouter from automatically removing content
     };
+
+    // Add reasoning support if specified and not "none"
+    if (params.reasoning && params.reasoning !== "none") {
+      requestBody.reasoning = {
+        effort: params.reasoning,
+        exclude: true // Always exclude reasoning trace per user requirement
+      };
+    }
 
     // Only include optional parameters if they are provided
     if (params.temperature !== undefined) {
