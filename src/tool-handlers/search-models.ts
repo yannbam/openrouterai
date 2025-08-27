@@ -1,4 +1,4 @@
-import { ModelCache, OpenRouterModel } from '../model-cache.js';
+import { ModelCache } from '../model-cache.js';
 import { OpenRouterAPIClient } from '../openrouter-api.js';
 
 export interface SearchModelsToolRequest {
@@ -39,24 +39,28 @@ export async function handleSearchModels(
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              error: {
-                code: 'fetch_failed',
-                message: 'Failed to fetch models. Please try again.',
-                details: {
-                  applied_filters: {
-                    query: args.query,
-                    provider: args.provider,
-                    minContextLength: args.minContextLength,
-                    maxContextLength: args.maxContextLength,
-                    maxPromptPrice: args.maxPromptPrice,
-                    maxCompletionPrice: args.maxCompletionPrice,
-                    capabilities: args.capabilities,
-                    limit: args.limit
-                  }
-                }
-              }
-            }, null, 2),
+            text: JSON.stringify(
+              {
+                error: {
+                  code: 'fetch_failed',
+                  message: 'Failed to fetch models. Please try again.',
+                  details: {
+                    applied_filters: {
+                      query: args.query,
+                      provider: args.provider,
+                      minContextLength: args.minContextLength,
+                      maxContextLength: args.maxContextLength,
+                      maxPromptPrice: args.maxPromptPrice,
+                      maxCompletionPrice: args.maxCompletionPrice,
+                      capabilities: args.capabilities,
+                      limit: args.limit,
+                    },
+                  },
+                },
+              },
+              null,
+              2
+            ),
           },
         ],
         isError: true,
@@ -69,7 +73,7 @@ export async function handleSearchModels(
         // Text search
         if (args.query) {
           const searchTerm = args.query.toLowerCase();
-          const matchesQuery = 
+          const matchesQuery =
             model.id.toLowerCase().includes(searchTerm) ||
             (model.name && model.name.toLowerCase().includes(searchTerm)) ||
             (model.description && model.description.toLowerCase().includes(searchTerm));
@@ -87,8 +91,13 @@ export async function handleSearchModels(
         if (args.maxContextLength && model.context_length > args.maxContextLength) return false;
 
         // Price filters
-        if (args.maxPromptPrice && parseFloat(model.pricing.prompt) > args.maxPromptPrice) return false;
-        if (args.maxCompletionPrice && parseFloat(model.pricing.completion) > args.maxCompletionPrice) return false;
+        if (args.maxPromptPrice && parseFloat(model.pricing.prompt) > args.maxPromptPrice)
+          return false;
+        if (
+          args.maxCompletionPrice &&
+          parseFloat(model.pricing.completion) > args.maxCompletionPrice
+        )
+          return false;
 
         // Capabilities filters
         if (args.capabilities) {
@@ -109,14 +118,14 @@ export async function handleSearchModels(
         context_length: model.context_length,
         pricing: {
           prompt: `$${model.pricing.prompt}/1K tokens`,
-          completion: `$${model.pricing.completion}/1K tokens`
+          completion: `$${model.pricing.completion}/1K tokens`,
         },
         capabilities: {
           functions: model.capabilities?.functions || false,
           tools: model.capabilities?.tools || false,
           vision: model.capabilities?.vision || false,
-          json_mode: model.capabilities?.json_mode || false
-        }
+          json_mode: model.capabilities?.json_mode || false,
+        },
       }));
 
     const response = {
@@ -135,9 +144,9 @@ export async function handleSearchModels(
           maxPromptPrice: args.maxPromptPrice,
           maxCompletionPrice: args.maxCompletionPrice,
           capabilities: args.capabilities,
-          limit: args.limit
-        }
-      }
+          limit: args.limit,
+        },
+      },
     };
 
     return {

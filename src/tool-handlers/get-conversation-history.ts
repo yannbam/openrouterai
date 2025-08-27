@@ -5,9 +5,9 @@ export interface GetConversationHistoryToolRequest {
   conversationId: string;
 }
 
-export async function handleGetConversationHistory(
-  request: { params: { arguments: GetConversationHistoryToolRequest } }
-) {
+export async function handleGetConversationHistory(request: {
+  params: { arguments: GetConversationHistoryToolRequest };
+}) {
   const convManager = ConversationManager.getInstance();
   const { conversationId } = request.params.arguments;
 
@@ -22,7 +22,9 @@ export async function handleGetConversationHistory(
     const conversation = convManager.getConversation(conversationId);
     if (!conversation) {
       return {
-        content: [{ type: 'text', text: `Error: Conversation with ID "${conversationId}" not found.` }],
+        content: [
+          { type: 'text', text: `Error: Conversation with ID "${conversationId}" not found.` },
+        ],
         isError: true,
       };
     }

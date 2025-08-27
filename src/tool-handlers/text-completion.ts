@@ -1,5 +1,4 @@
 import { ConversationManager } from '../conversation-manager.js';
-import { ConversationMessage } from '../conversation.js';
 import { OpenRouterAPIClient } from '../openrouter-api.js';
 
 export interface TextCompletionToolRequest {
@@ -81,7 +80,10 @@ export async function handleTextCompletion(
 
     // Debug logging when DEBUG environment variable is set
     if (process.env.DEBUG === '1') {
-      console.error('[DEBUG] Text Completion Tool Handler - Input params:', JSON.stringify(requestParams, null, 2));
+      console.error(
+        '[DEBUG] Text Completion Tool Handler - Input params:',
+        JSON.stringify(requestParams, null, 2)
+      );
     }
 
     const response = await apiClient.textCompletion(requestParams);

@@ -1,5 +1,5 @@
-import { OpenRouterAPIClient } from '../openrouter-api.js';
 import { ModelCache } from '../model-cache.js';
+import { OpenRouterAPIClient } from '../openrouter-api.js';
 
 export interface GetModelProvidersToolRequest {
   model: string;
@@ -15,7 +15,7 @@ export async function handleGetModelProviders(
   try {
     // Try to validate model from cache first
     let isValidModel = await modelCache.validateModel(model);
-    
+
     if (!isValidModel) {
       // Cache might be empty or expired, fetch models from API
       const models = await apiClient.fetchModels();
@@ -25,7 +25,7 @@ export async function handleGetModelProviders(
         isValidModel = await modelCache.validateModel(model);
       }
     }
-    
+
     if (!isValidModel) {
       return {
         content: [
@@ -40,7 +40,7 @@ export async function handleGetModelProviders(
 
     // Model is valid, fetch its provider endpoints
     const endpointsResponse = await apiClient.fetchModelEndpoints(model);
-    
+
     if (!endpointsResponse || !endpointsResponse.data) {
       return {
         content: [
@@ -60,8 +60,8 @@ export async function handleGetModelProviders(
       created: Math.floor(Date.now() / 1000),
       model: model,
       data: {
-        providers: endpointsResponse.data.endpoints || []
-      }
+        providers: endpointsResponse.data.endpoints || [],
+      },
     };
 
     return {

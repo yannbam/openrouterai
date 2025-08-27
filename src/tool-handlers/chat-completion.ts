@@ -18,7 +18,7 @@ export interface ChatCompletionToolRequest {
   max_tokens?: number;
   seed?: number;
   providers?: string[]; // New field for provider selection
-  reasoning?: "none" | "low" | "medium" | "high"; // Reasoning support level
+  reasoning?: 'none' | 'low' | 'medium' | 'high'; // Reasoning support level
   additionalParams?: Record<string, string | number | boolean>;
 }
 
@@ -30,7 +30,7 @@ function estimateTokenCount(text: string): number {
 
 // Truncate messages to fit within the context window
 function truncateMessagesToFit(
-  messages: ChatCompletionMessage[], 
+  messages: ChatCompletionMessage[],
   maxTokens: number
 ): ChatCompletionMessage[] {
   const truncated: ChatCompletionMessage[] = [];
@@ -103,10 +103,13 @@ export async function handleChatCompletion(
       };
     }
     // Map stored ConversationMessage to ChatCompletionMessage for API
-    const historyMessages = conversation.history.map((m: ConversationMessage) => ({
-      role: m.role as 'user' | 'system' | 'assistant' | 'tool',
-      content: m.content
-    } as ChatCompletionMessage));
+    const historyMessages = conversation.history.map(
+      (m: ConversationMessage) =>
+        ({
+          role: m.role as 'user' | 'system' | 'assistant' | 'tool',
+          content: m.content,
+        }) as ChatCompletionMessage
+    );
     messagesForAPI = [...historyMessages, ...args.messages];
     returnedConversationId = args.conversationId;
   } else {
@@ -119,19 +122,26 @@ export async function handleChatCompletion(
     const truncatedMessages = truncateMessagesToFit(messagesForAPI, MAX_CONTEXT_TOKENS);
 
     // Apply default reasoning value if not specified
-    const reasoning = args.reasoning || "medium";
+    const reasoning = args.reasoning || 'medium';
 
     // Debug logging when DEBUG environment variable is set
     if (process.env.DEBUG === '1') {
-      console.error('[DEBUG] Chat Completion Tool Handler - Input params:', JSON.stringify({
-        model,
-        messagesCount: truncatedMessages.length,
-        temperature: args.temperature,
-        max_tokens: args.max_tokens,
-        seed: args.seed,
-        reasoning: reasoning,
-        additionalParams: args.additionalParams,
-      }, null, 2));
+      console.error(
+        '[DEBUG] Chat Completion Tool Handler - Input params:',
+        JSON.stringify(
+          {
+            model,
+            messagesCount: truncatedMessages.length,
+            temperature: args.temperature,
+            max_tokens: args.max_tokens,
+            seed: args.seed,
+            reasoning: reasoning,
+            additionalParams: args.additionalParams,
+          },
+          null,
+          2
+        )
+      );
     }
 
     const response = await apiClient.chatCompletion({
@@ -187,29 +197,33 @@ export async function handleChatCompletion(
     // Format response to match OpenRouter schema
     const formattedResponse = {
       id: `gen-${Date.now()}`,
-      choices: [{
-        finish_reason: completion.choices[0].finish_reason,
-        message: {
-          role: completion.choices[0].message.role,
-          content: completion.choices[0].message.content || '',
-          tool_calls: completion.choices[0].message.tool_calls
-        }
-      }],
+      choices: [
+        {
+          finish_reason: completion.choices[0].finish_reason,
+          message: {
+            role: completion.choices[0].message.role,
+            content: completion.choices[0].message.content || '',
+            tool_calls: completion.choices[0].message.tool_calls,
+          },
+        },
+      ],
       created: Math.floor(Date.now() / 1000),
       model: model,
       object: 'chat.completion',
       usage: completion.usage || {
         prompt_tokens: 0,
         completion_tokens: 0,
-        total_tokens: 0
-      }
+        total_tokens: 0,
+      },
     };
 
     return {
       content: [
         {
           type: 'text',
-          text: `conversationId: ${returnedConversationId}\n\n` + JSON.stringify(formattedResponse, null, 2),
+          text:
+            `conversationId: ${returnedConversationId}\n\n` +
+            JSON.stringify(formattedResponse, null, 2),
         },
       ],
       // conversationId: returnedConversationId, // Add this field

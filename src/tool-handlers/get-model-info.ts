@@ -11,11 +11,11 @@ export async function handleGetModelInfo(
   apiClient: OpenRouterAPIClient
 ) {
   const { model } = request.params.arguments;
-  
+
   try {
     // Try to get from cache first, if not available fetch from API
     let modelInfo = await modelCache.getModelInfo(model);
-    
+
     if (!modelInfo) {
       // Cache is empty or expired, fetch models from API
       const models = await apiClient.fetchModels();
@@ -25,7 +25,7 @@ export async function handleGetModelInfo(
         modelInfo = await modelCache.getModelInfo(model);
       }
     }
-    
+
     if (!modelInfo) {
       return {
         content: [
@@ -53,15 +53,15 @@ export async function handleGetModelInfo(
         context_length: modelInfo.context_length,
         pricing: {
           prompt: `$${modelInfo.pricing.prompt}/1K tokens`,
-          completion: `$${modelInfo.pricing.completion}/1K tokens`
+          completion: `$${modelInfo.pricing.completion}/1K tokens`,
         },
         capabilities: {
           functions: modelInfo.capabilities?.functions || false,
           tools: modelInfo.capabilities?.tools || false,
           vision: modelInfo.capabilities?.vision || false,
-          json_mode: modelInfo.capabilities?.json_mode || false
-        }
-      }
+          json_mode: modelInfo.capabilities?.json_mode || false,
+        },
+      },
     };
 
     return {
