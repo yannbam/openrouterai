@@ -1,6 +1,8 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import { setTimeout } from 'timers/promises';
+
 import { OpenRouterModelResponse } from './model-cache.js';
+import { ProviderConfig } from './types.js';
 
 export interface RateLimitState {
   remaining: number;
@@ -81,14 +83,15 @@ export class OpenRouterAPIClient {
   }
 
   async chatCompletion(params: {
-    model: string, 
-    messages: any[], 
-    temperature?: number,
-    max_tokens?: number,
-    seed?: number,
-    providers?: string[],
-    reasoning?: "none" | "low" | "medium" | "high",
-    additionalParams?: Record<string, string | number | boolean>
+    model: string;
+    messages: any[];
+    temperature?: number;
+    max_tokens?: number;
+    seed?: number;
+    providers?: string[]; // Legacy support
+    provider?: ProviderConfig; // New provider configuration
+    reasoning?: 'none' | 'low' | 'medium' | 'high';
+    additionalParams?: Record<string, string | number | boolean>;
   }) {
     const requestBody: any = {
       model: params.model,
@@ -115,11 +118,38 @@ export class OpenRouterAPIClient {
       requestBody.seed = params.seed;
     }
 
-    // Add provider routing if specified
-    if (params.providers && params.providers.length > 0) {
+    // Add provider routing - prioritize new provider config over legacy providers
+    if (params.provider) {
+      const providerConfig: any = {};
+      
+      if (params.provider.quantizations) {
+        providerConfig.quantizations = params.provider.quantizations;
+      }
+      if (params.provider.ignore) {
+        providerConfig.ignore = params.provider.ignore;
+      }
+      if (params.provider.sort) {
+        providerConfig.sort = params.provider.sort;
+      }
+      if (params.provider.order) {
+        providerConfig.order = params.provider.order;
+      }
+      if (params.provider.require_parameters !== undefined) {
+        providerConfig.require_parameters = params.provider.require_parameters;
+      }
+      if (params.provider.data_collection) {
+        providerConfig.data_collection = params.provider.data_collection;
+      }
+      if (params.provider.allow_fallbacks !== undefined) {
+        providerConfig.allow_fallbacks = params.provider.allow_fallbacks;
+      }
+      
+      requestBody.provider = providerConfig;
+    } else if (params.providers && params.providers.length > 0) {
+      // Legacy provider support
       requestBody.provider = {
         order: params.providers,
-        allow_fallbacks: false
+        allow_fallbacks: false,
       };
     }
 

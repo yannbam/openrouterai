@@ -1,6 +1,8 @@
 import { ConversationManager } from '../conversation-manager.js';
 import { ConversationMessage } from '../conversation.js';
+import { createErrorResult, createSuccessResult, parseModel } from '../model-utils.js';
 import { OpenRouterAPIClient } from '../openrouter-api.js';
+import { ProviderConfig, ToolResult } from '../types.js';
 
 // Maximum context tokens (matches tool-handlers.ts)
 const MAX_CONTEXT_TOKENS = 200000;
@@ -11,13 +13,14 @@ export interface ChatCompletionMessage {
 }
 
 export interface ChatCompletionToolRequest {
-  conversationId?: string; // New field
+  conversationId?: string;
   model?: string;
   messages: ChatCompletionMessage[];
   temperature?: number;
   max_tokens?: number;
   seed?: number;
-  providers?: string[]; // New field for provider selection
+  providers?: string[]; // Legacy field for provider selection
+  provider?: ProviderConfig; // New comprehensive provider configuration
   reasoning?: 'none' | 'low' | 'medium' | 'high'; // Reasoning support level
   additionalParams?: Record<string, string | number | boolean>;
 }
@@ -58,37 +61,31 @@ export async function handleChatCompletion(
   request: { params: { arguments: ChatCompletionToolRequest } },
   apiClient: OpenRouterAPIClient,
   defaultModel?: string
-) {
+): Promise<ToolResult & { conversationId?: string }> {
   const args = request.params.arguments;
   const convManager = ConversationManager.getInstance();
   let returnedConversationId: string | undefined = args.conversationId;
   let messagesForAPI: ChatCompletionMessage[];
 
   // Validate model selection
-  const model = args.model || defaultModel;
-  if (!model) {
+  const rawModel = args.model || defaultModel;
+  if (!rawModel) {
     return {
-      content: [
-        {
-          type: 'text',
-          text: 'No model specified and no default model configured in MCP settings. Please specify a model or set OPENROUTER_DEFAULT_MODEL in the MCP configuration.',
-        },
-      ],
-      isError: true,
+      ...createErrorResult(
+        'No model specified and no default model configured in MCP settings. Please specify a model or set OPENROUTER_DEFAULT_MODEL in the MCP configuration.'
+      ),
       conversationId: args.conversationId,
     };
   }
 
+  // Parse model for suffix support (:floor, :nitro)
+  const parsedModel = parseModel(rawModel);
+  const model = parsedModel.baseModel;
+
   // Validate message array
   if (args.messages.length === 0) {
     return {
-      content: [
-        {
-          type: 'text',
-          text: 'Messages array cannot be empty. At least one message is required.',
-        },
-      ],
-      isError: true,
+      ...createErrorResult('Messages array cannot be empty. At least one message is required.'),
       conversationId: args.conversationId,
     };
   }
@@ -97,8 +94,7 @@ export async function handleChatCompletion(
     const conversation = convManager.getConversation(args.conversationId);
     if (!conversation) {
       return {
-        content: [{ type: 'text', text: `Conversation with ID ${args.conversationId} not found.` }],
-        isError: true,
+        ...createErrorResult(`Conversation with ID ${args.conversationId} not found.`),
         conversationId: args.conversationId,
       };
     }
@@ -144,13 +140,17 @@ export async function handleChatCompletion(
       );
     }
 
+    // Handle model suffix for routing (add suffix back to model for API)
+    const modelForAPI = parsedModel.suffix ? `${model}:${parsedModel.suffix}` : model;
+
     const response = await apiClient.chatCompletion({
-      model,
+      model: modelForAPI,
       messages: truncatedMessages,
       temperature: args.temperature,
       max_tokens: args.max_tokens,
       seed: args.seed,
-      providers: args.providers,
+      providers: args.providers, // Legacy support
+      provider: args.provider, // New provider configuration
       reasoning: reasoning,
       additionalParams: args.additionalParams,
     });
@@ -217,28 +217,18 @@ export async function handleChatCompletion(
       },
     };
 
+    const responseText =
+      `conversationId: ${returnedConversationId}\n\n` + JSON.stringify(formattedResponse, null, 2);
+
     return {
-      content: [
-        {
-          type: 'text',
-          text:
-            `conversationId: ${returnedConversationId}\n\n` +
-            JSON.stringify(formattedResponse, null, 2),
-        },
-      ],
-      // conversationId: returnedConversationId, // Add this field
+      ...createSuccessResult(responseText),
+      conversationId: returnedConversationId,
     };
   } catch (error) {
     if (error instanceof Error) {
       return {
-        content: [
-          {
-            type: 'text',
-            text: `OpenRouter API error: ${error.message}`,
-          },
-        ],
-        isError: true,
-        conversationId: returnedConversationId, // Include here
+        ...createErrorResult(`OpenRouter API error: ${error.message}`),
+        conversationId: returnedConversationId,
       };
     }
     throw error;
