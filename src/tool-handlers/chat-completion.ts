@@ -18,6 +18,7 @@ export interface ChatCompletionToolRequest {
   max_tokens?: number;
   seed?: number;
   providers?: string[]; // New field for provider selection
+  reasoning?: "none" | "low" | "medium" | "high"; // Reasoning support level
   additionalParams?: Record<string, string | number | boolean>;
 }
 
@@ -117,6 +118,9 @@ export async function handleChatCompletion(
     // Truncate messages to fit within context window
     const truncatedMessages = truncateMessagesToFit(messagesForAPI, MAX_CONTEXT_TOKENS);
 
+    // Apply default reasoning value if not specified
+    const reasoning = args.reasoning || "medium";
+
     // Debug logging when DEBUG environment variable is set
     if (process.env.DEBUG === '1') {
       console.error('[DEBUG] Chat Completion Tool Handler - Input params:', JSON.stringify({
@@ -125,6 +129,7 @@ export async function handleChatCompletion(
         temperature: args.temperature,
         max_tokens: args.max_tokens,
         seed: args.seed,
+        reasoning: reasoning,
         additionalParams: args.additionalParams,
       }, null, 2));
     }
@@ -136,6 +141,7 @@ export async function handleChatCompletion(
       max_tokens: args.max_tokens,
       seed: args.seed,
       providers: args.providers,
+      reasoning: reasoning,
       additionalParams: args.additionalParams,
     });
 
