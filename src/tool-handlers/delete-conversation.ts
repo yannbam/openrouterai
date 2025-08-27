@@ -41,6 +41,7 @@ export async function handleDeleteConversation(request: {
       // No conversationId needed in response as it's deleted
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`Error deleting conversation ${conversationId}:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {

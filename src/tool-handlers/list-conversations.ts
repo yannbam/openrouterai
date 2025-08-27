@@ -18,6 +18,7 @@ export async function handleListConversations() {
       // No conversationId needed in the response for this tool itself
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error listing conversations:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {
