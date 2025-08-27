@@ -65,9 +65,9 @@
    - Update `README.md` if fundamental features were added or changed
 
 3. **After human approval:**
-   - Run `ghprm` command - Pushes current branch and creates PR
+   - Run `git push && gh pr create --fill && gh pr merge --merge` - Pushes branch, creates PR, and merges
    - If command was successful:
-   - Run `pcm` command - Switches to main and pulls merge
+   - Run `git checkout main && git pull` - Switches to main and pulls merge
    - Wait for command success confirmation
 
 4. **Final handoff:**
