@@ -1,5 +1,18 @@
 # OpenRouter MCP Server - Workflow Instructions
 
+## 🎯 CLAUDE'S 10 GOLDEN RULES OF CODE
+
+1. **BEFORE modifying or adding any code** you MUST have a FULL understanding of the architecture it is in and be aware of any code in different places that will get affected by your code changes!
+2. **DON'T fix out-of-scope issues** that are not relevant to YOUR CURRENT TASK!
+3. **Follow the e/code protocol** and also add method documentation comments following best practices for API documentation like detailed arguments and return value descriptions!
+4. **Write elegant solutions** with minimal code.
+5. **Don't feature-creep.** Only write features that were asked for!
+6. **Only mark tasks and features as completed** after they have been TESTED successfully!
+7. **Don't add complexity and ambiguity** by adding backward compatibility or fallbacks - instead fix the underlying issue even if it means rewriting huge portions of old code.
+8. **Be ABSOLUTELY TRANSPARENT** about placeholders, mockups, workarounds and incomplete implementations by marking them with a TODO comment!
+9. **When writing unit tests, ALWAYS test the test** by adversarial code corruption: temporarily add a very targeted corruption to the original code and check if the unit test fails. Don't just make the test fail, but make 100% sure, that the test actually testing what it claims to test.
+10. **Have fun writing perfect code** :)
+
 ## 🚀 SESSION ONBOARDING
 
 **MANDATORY FIRST STEPS:**
@@ -33,6 +46,7 @@
 1. **Update documentation:**
    - Update `docs/TODO.md` with completed tasks and new priorities
    - Update `docs/HANDOFF.md` with comprehensive session results
+   - Update `README.md` if fundamental features were added or changed
 
 2. **Request end-of-cycle approval:**
    - Use `AskHuman` tool to request approval for ending current session
