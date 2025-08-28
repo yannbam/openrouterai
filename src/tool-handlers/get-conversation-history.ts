@@ -38,6 +38,7 @@ export async function handleGetConversationHistory(request: {
       conversationId: conversationId, // Return the context
     };
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`Error getting history for conversation ${conversationId}:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {

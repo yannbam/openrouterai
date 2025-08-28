@@ -1,8 +1,9 @@
+import { ProviderConfig, ToolResult } from '../types.js';
+import { createErrorResult, createSuccessResult, debugLog, parseModel } from '../model-utils.js';
+
 import { ConversationManager } from '../conversation-manager.js';
 import { ConversationMessage } from '../conversation.js';
-import { createErrorResult, createSuccessResult, parseModel } from '../model-utils.js';
 import { OpenRouterAPIClient } from '../openrouter-api.js';
-import { ProviderConfig, ToolResult } from '../types.js';
 
 // Maximum context tokens (matches tool-handlers.ts)
 const MAX_CONTEXT_TOKENS = 200000;
@@ -121,24 +122,22 @@ export async function handleChatCompletion(
     const reasoning = args.reasoning || 'medium';
 
     // Debug logging when DEBUG environment variable is set
-    if (process.env.DEBUG === '1') {
-      console.error(
-        '[DEBUG] Chat Completion Tool Handler - Input params:',
-        JSON.stringify(
-          {
-            model,
-            messagesCount: truncatedMessages.length,
-            temperature: args.temperature,
-            max_tokens: args.max_tokens,
-            seed: args.seed,
-            reasoning: reasoning,
-            additionalParams: args.additionalParams,
-          },
-          null,
-          2
-        )
-      );
-    }
+    debugLog(
+      'Chat Completion Tool Handler - Input params:',
+      JSON.stringify(
+        {
+          model,
+          messagesCount: truncatedMessages.length,
+          temperature: args.temperature,
+          max_tokens: args.max_tokens,
+          seed: args.seed,
+          reasoning: reasoning,
+          additionalParams: args.additionalParams,
+        },
+        null,
+        2
+      )
+    );
 
     // Handle model suffix for routing (add suffix back to model for API)
     const modelForAPI = parsedModel.suffix ? `${model}:${parsedModel.suffix}` : model;
@@ -160,16 +159,17 @@ export async function handleChatCompletion(
     const assistantRole = completion.choices[0].message.role; // This is 'assistant'
 
     if (args.conversationId) {
+      const conversationId = args.conversationId;
       // Add the new user messages from args.messages to history
       args.messages.forEach(msg => {
-        convManager.addMessageToConversation(args.conversationId!, {
+        convManager.addMessageToConversation(conversationId, {
           role: msg.role,
           content: msg.content,
           timestamp: new Date().toISOString(),
         });
       });
       // Add assistant's response to history
-      convManager.addMessageToConversation(args.conversationId!, {
+      convManager.addMessageToConversation(conversationId, {
         role: assistantRole,
         content: assistantResponseContent,
         timestamp: new Date().toISOString(),

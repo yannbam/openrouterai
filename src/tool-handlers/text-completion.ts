@@ -1,6 +1,8 @@
 import { ConversationManager } from '../conversation-manager.js';
 import { OpenRouterAPIClient } from '../openrouter-api.js';
 
+import { debugLog } from '../model-utils.js';
+
 export interface TextCompletionToolRequest {
   conversationId?: string;
   model: string;
@@ -79,12 +81,10 @@ export async function handleTextCompletion(
     };
 
     // Debug logging when DEBUG environment variable is set
-    if (process.env.DEBUG === '1') {
-      console.error(
-        '[DEBUG] Text Completion Tool Handler - Input params:',
-        JSON.stringify(requestParams, null, 2)
-      );
-    }
+    debugLog(
+      'Text Completion Tool Handler - Input params:',
+      JSON.stringify(requestParams, null, 2)
+    );
 
     const response = await apiClient.textCompletion(requestParams);
 
@@ -93,14 +93,15 @@ export async function handleTextCompletion(
 
     // Handle conversation persistence
     if (args.conversationId) {
+      const conversationId = args.conversationId;
       // Add the new prompt to history
-      convManager.addMessageToConversation(args.conversationId!, {
+      convManager.addMessageToConversation(conversationId, {
         role: 'user',
         content: args.prompt,
         timestamp: new Date().toISOString(),
       });
       // Add completion response to history
-      convManager.addMessageToConversation(args.conversationId!, {
+      convManager.addMessageToConversation(conversationId, {
         role: 'assistant',
         content: completionText,
         timestamp: new Date().toISOString(),
@@ -132,8 +133,15 @@ export async function handleTextCompletion(
         },
       ],
     };
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.error?.message || error.message || 'Unknown error';
+  } catch (error: unknown) {
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      const response = (error as { response?: { data?: { error?: { message?: string } } } })
+        .response;
+      errorMessage = response?.data?.error?.message || 'API error';
+    }
     return {
       content: [
         {
