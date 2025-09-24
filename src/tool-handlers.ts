@@ -45,17 +45,20 @@ export class ToolHandlers {
   }
 
   private setupToolHandlers() {
-    // Helper function to convert tool handler results to CallToolResult format
+    // Helper function to convert tool handler results to CompatibilityCallToolResult format
+    // This preserves custom fields like conversationId in the toolResult field
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const convertToCallToolResult = (toolResult: any) => {
+    const convertToCompatibilityCallToolResult = (toolResult: any) => {
       return {
+        // Standard MCP fields
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         content: toolResult.content.map((item: any) => ({
           type: 'text' as const,
           text: item.text,
         })),
         isError: toolResult.isError || false,
-        // Note: conversationId is handled separately and not part of CallToolResult
+        // Preserve the entire original result including custom fields like conversationId
+        toolResult: toolResult,
       };
     };
 
@@ -129,7 +132,7 @@ export class ToolHandlers {
           this.apiClient,
           this.defaultModel
         );
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
     // Register text completion tool
@@ -189,7 +192,7 @@ export class ToolHandlers {
           },
           this.apiClient
         );
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
     // Register search models tool
@@ -240,7 +243,7 @@ export class ToolHandlers {
           this.apiClient,
           this.modelCache
         );
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
 
@@ -263,7 +266,7 @@ export class ToolHandlers {
           this.modelCache,
           this.apiClient
         );
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
 
@@ -287,7 +290,7 @@ export class ToolHandlers {
           this.apiClient,
           this.modelCache
         );
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
 
@@ -309,7 +312,7 @@ export class ToolHandlers {
           },
           this.modelCache
         );
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
 
@@ -322,7 +325,7 @@ export class ToolHandlers {
       },
       async () => {
         const result = await handleListConversations();
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
 
@@ -341,7 +344,7 @@ export class ToolHandlers {
             arguments: args as GetConversationHistoryToolRequest,
           },
         });
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
 
@@ -360,7 +363,7 @@ export class ToolHandlers {
             arguments: args as DeleteConversationToolRequest,
           },
         });
-        return convertToCallToolResult(result);
+        return convertToCompatibilityCallToolResult(result);
       }
     );
   }
