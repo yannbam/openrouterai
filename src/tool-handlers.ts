@@ -1,39 +1,42 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
-  CallToolRequestSchema,
-  CallToolRequest,
-  ErrorCode,
-  ListToolsRequestSchema,
-  McpError,
-} from '@modelcontextprotocol/sdk/types.js';
+  ChatCompletionToolRequest,
+  handleChatCompletion,
+} from './tool-handlers/chat-completion.js';
+import {
+  DeleteConversationToolRequest,
+  handleDeleteConversation,
+} from './tool-handlers/delete-conversation.js';
+import {
+  GetConversationHistoryToolRequest,
+  handleGetConversationHistory,
+} from './tool-handlers/get-conversation-history.js';
+import { GetModelInfoToolRequest, handleGetModelInfo } from './tool-handlers/get-model-info.js';
+import {
+  GetModelProvidersToolRequest,
+  handleGetModelProviders,
+} from './tool-handlers/get-model-providers.js';
+import { SearchModelsToolRequest, handleSearchModels } from './tool-handlers/search-models.js';
+import {
+  TextCompletionToolRequest,
+  handleTextCompletion,
+} from './tool-handlers/text-completion.js';
+import { ValidateModelToolRequest, handleValidateModel } from './tool-handlers/validate-model.js';
+import { z } from 'zod';
 
-import { ConversationManager } from './conversation-manager.js';
-// ConversationMessage is not directly used, but Conversation is for type hints if needed.
-// For now, direct usage is within ConversationManager.
-// import { ConversationMessage, Conversation } from './conversation.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
 import { ModelCache } from './model-cache.js';
 import { OpenRouterAPIClient } from './openrouter-api.js';
-import { handleChatCompletion, ChatCompletionToolRequest } from './tool-handlers/chat-completion.js';
-import { handleTextCompletion, TextCompletionToolRequest } from './tool-handlers/text-completion.js';
-import { handleSearchModels, SearchModelsToolRequest } from './tool-handlers/search-models.js';
-import { handleGetModelInfo, GetModelInfoToolRequest } from './tool-handlers/get-model-info.js';
-import { handleGetModelProviders, GetModelProvidersToolRequest } from './tool-handlers/get-model-providers.js';
-import { handleValidateModel, ValidateModelToolRequest } from './tool-handlers/validate-model.js';
-import { handleListConversations, ListConversationsToolRequest } from './tool-handlers/list-conversations.js';
-import { handleGetConversationHistory, GetConversationHistoryToolRequest } from './tool-handlers/get-conversation-history.js';
-import { handleDeleteConversation, DeleteConversationToolRequest } from './tool-handlers/delete-conversation.js';
+import { ToolResult } from './types.js';
+import { handleListConversations } from './tool-handlers/list-conversations.js';
 
 export class ToolHandlers {
-  private server: Server;
+  private server: McpServer;
   private modelCache: ModelCache;
   private apiClient: OpenRouterAPIClient;
   private defaultModel?: string;
 
-  constructor(
-    server: Server, 
-    apiKey: string, 
-    defaultModel?: string
-  ) {
+  constructor(server: McpServer, apiKey: string, defaultModel?: string) {
     this.server = server;
     this.modelCache = ModelCache.getInstance();
     this.apiClient = new OpenRouterAPIClient(apiKey);
@@ -43,414 +46,321 @@ export class ToolHandlers {
   }
 
   private setupToolHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        // Note: The inputSchema for chat_completion already includes conversationId
-        {
-          name: 'ai-chat_completion',
-          description: 'Send a message to an AI model and get a response',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              conversationId: {
-                type: 'string',
-                description: 'Optional ID of an existing conversation to continue. When an ID is provided, the conversation history will be prepended and you only need to set the new user message in the messages argument!',
-              },
-              model: {
-                type: 'string',
-                description: 'The model to use (e.g., "google/gemini-2.0-flash-thinking-exp:free", "undi95/toppy-m-7b:free"). If not provided, uses the default model if set.',
-              },
-              messages: {
-                type: 'array',
-                description: 'An array of conversation messages with roles and content',
-                minItems: 1,
-                maxItems: 100,
-                items: {
-                  type: 'object',
-                  properties: {
-                    role: {
-                      type: 'string',
-                      enum: ['system', 'user', 'assistant'],
-                      description: 'The role of the message sender',
-                    },
-                    content: {
-                      type: 'string',
-                      description: 'The content of the message',
-                    },
-                  },
-                  required: ['role', 'content'],
-                }              },
-              temperature: {
-                type: 'number',
-                description: 'Sampling temperature (0-2)',
-                minimum: 0,
-                maximum: 2,
-              },
-              max_tokens: {
-                type: 'number',
-                description: 'Maximum number of tokens to generate (optional)',
-                minimum: 1,
-              },
-              seed: {
-                type: 'number',
-                description: 'Random seed for deterministic generation (optional)',
-              },
-              providers: {
-                type: 'array',
-                description: 'Optional list of provider names to use (e.g., ["hyperbolic", "openai"]). By default, OpenRouter automatically chooses the best available provider. When specified, only these providers will be used, with fallbacks disabled.',
-                items: {
-                  type: 'string'
-                }
-              },
-              reasoning: {
-                type: 'string',
-                description: 'Reasoning level for models that support reasoning (optional). Controls how much reasoning the model does internally before responding. Default: "medium". Set to "none" to disable reasoning.',
-                enum: ['none', 'low', 'medium', 'high']
-              },
-              additionalParams: {
-                type: 'object',
-                description: 'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.',
-                additionalProperties: {
-                  oneOf: [
-                    { type: 'string' },
-                    { type: 'number' },
-                    { type: 'boolean' }
-                  ]
-                }
-              },
-            },
-            required: ['messages'],
-          },
-          // Context window management details can be added as a separate property
-           maxContextTokens: 200000
-        },
-        {
-          name: 'ai-text_completion',
-          description: 'Generate text completion from a prompt using OpenRouter.ai models. Supports conversation continuation by appending new prompts to previous responses. Note: For "looming" (generating alternative conversation branches), you typically: 1) generate multiple continuations of the same prompt and choose which branch to continue, and 2) slightly edit or crop the response before feeding it back as input.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              conversationId: {
-                type: 'string',
-                description: 'Optional ID of an existing conversation to continue. When provided, the new prompt will be appended to the last assistant response.',
-              },
-              model: {
-                type: 'string',
-                description: 'The model to use for text completion (e.g., "meta-llama/llama-3.1-405b:free").',
-              },
-              prompt: {
-                type: 'string',
-                description: 'The text prompt to complete.',
-              },
-              max_tokens: {
-                type: 'number',
-                description: 'Maximum number of tokens to generate (optional).',
-                minimum: 1,
-              },
-              temperature: {
-                type: 'number',
-                description: 'Sampling temperature (0-2, optional).',
-                minimum: 0,
-                maximum: 2,
-              },
-              seed: {
-                type: 'number',
-                description: 'Random seed for deterministic generation (optional).',
-              },
-              providers: {
-                type: 'array',
-                description: 'Optional list of provider names to use (e.g., ["hyperbolic", "openai"]). By default, OpenRouter automatically chooses the best available provider. When specified, only these providers will be used, with fallbacks disabled.',
-                items: {
-                  type: 'string'
-                }
-              },
-              additionalParams: {
-                type: 'object',
-                description: 'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.',
-                additionalProperties: {
-                  oneOf: [
-                    { type: 'string' },
-                    { type: 'number' },
-                    { type: 'boolean' }
-                  ]
-                }
-              },
-            },
-            required: ['model', 'prompt'],
-          },
-        },
-        {
-          name: 'ai-chat_search_models',
-          description: 'Search and filter OpenRouter.ai models based on various criteria',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Optional search query to filter by name, description, or provider',
-              },
-              provider: {
-                type: 'string',
-                description: 'Filter by specific provider (e.g., "anthropic", "openai", "cohere")',
-              },
-              minContextLength: {
-                type: 'number',
-                description: 'Minimum context length in tokens',
-              },
-              maxContextLength: {
-                type: 'number',
-                description: 'Maximum context length in tokens',
-              },
-              maxPromptPrice: {
-                type: 'number',
-                description: 'Maximum price per 1K tokens for prompts',
-              },
-              maxCompletionPrice: {
-                type: 'number',
-                description: 'Maximum price per 1K tokens for completions',
-              },
-              capabilities: {
-                type: 'object',
-                description: 'Filter by model capabilities',
-                properties: {
-                  functions: {
-                    type: 'boolean',
-                    description: 'Requires function calling capability',
-                  },
-                  tools: {
-                    type: 'boolean',
-                    description: 'Requires tools capability',
-                  },
-                  vision: {
-                    type: 'boolean',
-                    description: 'Requires vision capability',
-                  },
-                  json_mode: {
-                    type: 'boolean',
-                    description: 'Requires JSON mode capability',
-                  }
-                }
-              },
-              limit: {
-                type: 'number',
-                description: 'Maximum number of results to return (default: 10)',
-                minimum: 1,
-                maximum: 50
-              }
-            }
-          },
-        },
-        {
-          name: 'ai-chat_get_model_info',
-          description: 'Get detailed information about a specific model',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              model: {
-                type: 'string',
-                description: 'The model ID to get information for',
-              },
-            },
-            required: ['model'],
-          },
-        },
-        {
-          name: 'ai-get_model_providers',
-          description: 'Get live provider endpoint information for a specific model, including pricing, quantization, and availability',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              model: {
-                type: 'string',
-                description: 'The model ID to get provider information for',
-              },
-            },
-            required: ['model'],
-          },
-        },
-        {
-          name: 'ai-chat_validate_model',
-          description: 'Check if a model ID is valid',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              model: {
-                type: 'string',
-                description: 'The model ID to validate',
-              },
-            },
-            required: ['model'],
-          },
-        },
-        {
-          name: 'ai-chat_list_conversations',
-          description: 'Lists all available conversations.',
-          inputSchema: {
-            type: 'object',
-            properties: {}, // Explicitly empty
-          },
-        },
-        {
-          name: 'ai-chat_get_conversation_history',
-          description: 'Gets the message history for a specific conversation.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              conversationId: {
-                type: 'string',
-                description: 'The ID of the conversation to retrieve.',
-              },
-            },
-            required: ['conversationId'],
-          },
-        },
-        {
-          name: 'ai-chat_delete_conversation',
-          description: 'Deletes a specific conversation and its history.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              conversationId: {
-                type: 'string',
-                description: 'The ID of the conversation to delete.',
-              },
-            },
-            required: ['conversationId'],
-          },
-        },
-      ],
-    }));
+    // Helper function to convert ToolResult to CallToolResult format
+    const convertToCallToolResult = (toolResult: ToolResult) => {
+      return {
+        content: toolResult.content.map(item => ({
+          type: item.type as 'text',
+          text: item.text,
+        })),
+        isError: toolResult.isError || false,
+        // Note: conversationId is handled separately and not part of CallToolResult
+      };
+    };
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
-      const convManager = ConversationManager.getInstance();
-      // Extract conversationId from request.params.
-      // The 'as any' is used because CallToolRequest.params is strictly typed by SDK.
-      const conversationId = (request.params as any).conversationId as string | undefined;
-      let result: any; // To store the result from tool handlers
-
-      const toolName = request.params.name;
-      const toolArguments = request.params.arguments;
-
-      // Log tool call if conversationId is valid
-      // (toolName !== 'chat_completion' is implicitly true here due to early return in chat_completion case)
-      if (conversationId) {
-        const conversation = convManager.getConversation(conversationId);
-        if (conversation) {
-          convManager.addMessageToConversation(conversationId, {
-            role: 'tool',
-            content: `Tool call: ${toolName} with arguments: ${JSON.stringify(toolArguments)}`,
-            timestamp: new Date().toISOString(),
-            toolName: toolName,
-          });
-        } else {
-          console.warn(`Conversation with ID ${conversationId} not found for tool call logging.`);
-        }
+    // Register chat completion tool
+    this.server.registerTool(
+      'ai-chat_completion',
+      {
+        description: 'Send a message to an AI model and get a response',
+        inputSchema: {
+          conversationId: z
+            .string()
+            .optional()
+            .describe(
+              'Optional ID of an existing conversation to continue. When an ID is provided, the conversation history will be prepended and you only need to set the new user message in the messages argument!'
+            ),
+          model: z
+            .string()
+            .optional()
+            .describe(
+              'The model to use (e.g., "google/gemini-2.0-flash-thinking-exp:free", "undi95/toppy-m-7b:free"). If not provided, uses the default model if set.'
+            ),
+          messages: z
+            .array(
+              z.object({
+                role: z
+                  .enum(['system', 'user', 'assistant'])
+                  .describe('The role of the message sender'),
+                content: z.string().describe('The content of the message'),
+              })
+            )
+            .min(1)
+            .max(100)
+            .describe('An array of conversation messages with roles and content'),
+          temperature: z.number().min(0).max(2).optional().describe('Sampling temperature (0-2)'),
+          max_tokens: z
+            .number()
+            .min(1)
+            .optional()
+            .describe('Maximum number of tokens to generate (optional)'),
+          seed: z
+            .number()
+            .optional()
+            .describe('Random seed for deterministic generation (optional)'),
+          providers: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Optional list of provider names to use (e.g., ["hyperbolic", "openai"]). By default, OpenRouter automatically chooses the best available provider. When specified, only these providers will be used, with fallbacks disabled.'
+            ),
+          reasoning: z
+            .enum(['none', 'low', 'medium', 'high'])
+            .optional()
+            .describe(
+              'Reasoning level for models that support reasoning (optional). Controls how much reasoning the model does internally before responding. Default: "medium". Set to "none" to disable reasoning.'
+            ),
+          additionalParams: z
+            .record(z.union([z.string(), z.number(), z.boolean()]))
+            .optional()
+            .describe(
+              'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.'
+            ),
+        },
+      },
+      async args => {
+        const result = await handleChatCompletion(
+          {
+            params: {
+              arguments: args as ChatCompletionToolRequest,
+            },
+          },
+          this.apiClient,
+          this.defaultModel
+        );
+        return convertToCallToolResult(result);
       }
-
-      switch (toolName) {
-        case 'ai-chat_completion':
-          // handleChatCompletion manages its own conversation logging.
-          // The conversationId from arguments is passed to it directly.
-          result = await handleChatCompletion({
+    );
+    // Register text completion tool
+    this.server.registerTool(
+      'ai-text_completion',
+      {
+        description:
+          'Generate text completion from a prompt using OpenRouter.ai models. Supports conversation continuation by appending new prompts to previous responses. Note: For "looming" (generating alternative conversation branches), you typically: 1) generate multiple continuations of the same prompt and choose which branch to continue, and 2) slightly edit or crop the response before feeding it back as input.',
+        inputSchema: {
+          conversationId: z
+            .string()
+            .optional()
+            .describe(
+              'Optional ID of an existing conversation to continue. When provided, the new prompt will be appended to the last assistant response.'
+            ),
+          model: z
+            .string()
+            .describe(
+              'The model to use for text completion (e.g., "meta-llama/llama-3.1-405b:free").'
+            ),
+          prompt: z.string().describe('The text prompt to complete.'),
+          max_tokens: z
+            .number()
+            .min(1)
+            .optional()
+            .describe('Maximum number of tokens to generate (optional).'),
+          temperature: z
+            .number()
+            .min(0)
+            .max(2)
+            .optional()
+            .describe('Sampling temperature (0-2, optional).'),
+          seed: z
+            .number()
+            .optional()
+            .describe('Random seed for deterministic generation (optional).'),
+          providers: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Optional list of provider names to use (e.g., ["hyperbolic", "openai"]). By default, OpenRouter automatically chooses the best available provider. When specified, only these providers will be used, with fallbacks disabled.'
+            ),
+          additionalParams: z
+            .record(z.union([z.string(), z.number(), z.boolean()]))
+            .optional()
+            .describe(
+              'Additional API parameters to pass to OpenRouter (optional). Object with key-value pairs where values can be strings, numbers, or booleans.'
+            ),
+        },
+      },
+      async args => {
+        const result = await handleTextCompletion(
+          {
             params: {
-              arguments: toolArguments as unknown as ChatCompletionToolRequest
-            }
-          }, this.apiClient, this.defaultModel);
-          // No generic tool result logging for chat_completion here.
-          return result; // Early return for chat_completion
-        
-        case 'ai-text_completion':
-          // handleTextCompletion manages its own conversation logging.
-          result = await handleTextCompletion({
-            params: {
-              arguments: toolArguments as unknown as TextCompletionToolRequest
-            }
-          }, this.apiClient);
-          // No generic tool result logging for text_completion here.
-          return result; // Early return for text_completion
-        
-        case 'ai-chat_search_models':
-          result = await handleSearchModels({
-            params: {
-              arguments: toolArguments as SearchModelsToolRequest
-            }
-          }, this.apiClient, this.modelCache);
-          break;
-        
-        case 'ai-chat_get_model_info':
-          result = await handleGetModelInfo({
-            params: {
-              arguments: toolArguments as unknown as GetModelInfoToolRequest
-            }
-          }, this.modelCache, this.apiClient);
-          break;
-        
-        case 'ai-get_model_providers':
-          result = await handleGetModelProviders({
-            params: {
-              arguments: toolArguments as unknown as GetModelProvidersToolRequest
-            }
-          }, this.apiClient, this.modelCache);
-          break;
-        
-        case 'ai-chat_validate_model':
-          result = await handleValidateModel({
-            params: {
-              arguments: toolArguments as unknown as ValidateModelToolRequest
-            }
-          }, this.modelCache);
-          break;
-        
-        case 'ai-chat_list_conversations':
-          result = await handleListConversations(); // No arguments passed
-          break;
-        
-        case 'ai-chat_get_conversation_history':
-          result = await handleGetConversationHistory({
-            params: {
-              arguments: toolArguments as unknown as GetConversationHistoryToolRequest
-            }
-          });
-          break;
-        
-        case 'ai-chat_delete_conversation':
-          result = await handleDeleteConversation({
-            params: {
-              arguments: toolArguments as unknown as DeleteConversationToolRequest
-            }
-          });
-          break;
-
-        default:
-          throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Unknown tool: ${toolName}`
-          );
+              arguments: args as TextCompletionToolRequest,
+            },
+          },
+          this.apiClient
+        );
+        return convertToCallToolResult(result);
       }
-
-      // Log tool result if conversationId is valid
-      // (toolName !== 'chat_completion' is implicitly true here due to early return in chat_completion case)
-      if (conversationId) {
-        const conversation = convManager.getConversation(conversationId); // Re-check conversation
-        if (conversation) {
-          let resultContent = '';
-          if (result.content && result.content.length > 0 && result.content[0].type === 'text') {
-            resultContent = result.content[0].text;
-          } else {
-            resultContent = JSON.stringify(result); // Fallback
-          }
-
-          convManager.addMessageToConversation(conversationId, {
-            role: 'tool',
-            content: `Tool result: ${toolName} completed. Output: ${resultContent}`,
-            timestamp: new Date().toISOString(),
-            toolName: toolName,
-            // TODO: Consider adding a flag if result.isError is true, e.g. toolCallFailed: result.isError
-          });
-        }
-        // console.warn for not found already handled above or implicitly if conv is null
+    );
+    // Register search models tool
+    this.server.registerTool(
+      'ai-chat_search_models',
+      {
+        description: 'Search and filter OpenRouter.ai models based on various criteria',
+        inputSchema: {
+          query: z
+            .string()
+            .optional()
+            .describe('Optional search query to filter by name, description, or provider'),
+          provider: z
+            .string()
+            .optional()
+            .describe('Filter by specific provider (e.g., "anthropic", "openai", "cohere")'),
+          minContextLength: z.number().optional().describe('Minimum context length in tokens'),
+          maxContextLength: z.number().optional().describe('Maximum context length in tokens'),
+          maxPromptPrice: z.number().optional().describe('Maximum price per 1K tokens for prompts'),
+          maxCompletionPrice: z
+            .number()
+            .optional()
+            .describe('Maximum price per 1K tokens for completions'),
+          capabilities: z
+            .object({
+              functions: z.boolean().optional().describe('Requires function calling capability'),
+              tools: z.boolean().optional().describe('Requires tools capability'),
+              vision: z.boolean().optional().describe('Requires vision capability'),
+              json_mode: z.boolean().optional().describe('Requires JSON mode capability'),
+            })
+            .optional()
+            .describe('Filter by model capabilities'),
+          limit: z
+            .number()
+            .min(1)
+            .max(50)
+            .optional()
+            .describe('Maximum number of results to return (default: 10)'),
+        },
+      },
+      async args => {
+        const result = await handleSearchModels(
+          {
+            params: {
+              arguments: args as SearchModelsToolRequest,
+            },
+          },
+          this.apiClient,
+          this.modelCache
+        );
+        return convertToCallToolResult(result);
       }
-      return result;
-    });
+    );
+
+    // Register get model info tool
+    this.server.registerTool(
+      'ai-chat_get_model_info',
+      {
+        description: 'Get detailed information about a specific model',
+        inputSchema: {
+          model: z.string().describe('The model ID to get information for'),
+        },
+      },
+      async args => {
+        const result = await handleGetModelInfo(
+          {
+            params: {
+              arguments: args as GetModelInfoToolRequest,
+            },
+          },
+          this.modelCache,
+          this.apiClient
+        );
+        return convertToCallToolResult(result);
+      }
+    );
+
+    // Register get model providers tool
+    this.server.registerTool(
+      'ai-get_model_providers',
+      {
+        description:
+          'Get live provider endpoint information for a specific model, including pricing, quantization, and availability',
+        inputSchema: {
+          model: z.string().describe('The model ID to get provider information for'),
+        },
+      },
+      async args => {
+        const result = await handleGetModelProviders(
+          {
+            params: {
+              arguments: args as GetModelProvidersToolRequest,
+            },
+          },
+          this.apiClient,
+          this.modelCache
+        );
+        return convertToCallToolResult(result);
+      }
+    );
+
+    // Register validate model tool
+    this.server.registerTool(
+      'ai-chat_validate_model',
+      {
+        description: 'Check if a model ID is valid',
+        inputSchema: {
+          model: z.string().describe('The model ID to validate'),
+        },
+      },
+      async args => {
+        const result = await handleValidateModel(
+          {
+            params: {
+              arguments: args as ValidateModelToolRequest,
+            },
+          },
+          this.modelCache
+        );
+        return convertToCallToolResult(result);
+      }
+    );
+
+    // Register list conversations tool
+    this.server.registerTool(
+      'ai-chat_list_conversations',
+      {
+        description: 'Lists all available conversations.',
+        inputSchema: {},
+      },
+      async () => {
+        const result = await handleListConversations();
+        return convertToCallToolResult(result);
+      }
+    );
+
+    // Register get conversation history tool
+    this.server.registerTool(
+      'ai-chat_get_conversation_history',
+      {
+        description: 'Gets the message history for a specific conversation.',
+        inputSchema: {
+          conversationId: z.string().describe('The ID of the conversation to retrieve.'),
+        },
+      },
+      async args => {
+        const result = await handleGetConversationHistory({
+          params: {
+            arguments: args as GetConversationHistoryToolRequest,
+          },
+        });
+        return convertToCallToolResult(result);
+      }
+    );
+
+    // Register delete conversation tool
+    this.server.registerTool(
+      'ai-chat_delete_conversation',
+      {
+        description: 'Deletes a specific conversation and its history.',
+        inputSchema: {
+          conversationId: z.string().describe('The ID of the conversation to delete.'),
+        },
+      },
+      async args => {
+        const result = await handleDeleteConversation({
+          params: {
+            arguments: args as DeleteConversationToolRequest,
+          },
+        });
+        return convertToCallToolResult(result);
+      }
+    );
   }
 }
