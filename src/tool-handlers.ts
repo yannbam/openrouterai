@@ -27,7 +27,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { ModelCache } from './model-cache.js';
 import { OpenRouterAPIClient } from './openrouter-api.js';
-import { ToolResult } from './types.js';
 import { handleListConversations } from './tool-handlers/list-conversations.js';
 
 export class ToolHandlers {
@@ -46,11 +45,13 @@ export class ToolHandlers {
   }
 
   private setupToolHandlers() {
-    // Helper function to convert ToolResult to CallToolResult format
-    const convertToCallToolResult = (toolResult: ToolResult) => {
+    // Helper function to convert tool handler results to CallToolResult format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const convertToCallToolResult = (toolResult: any) => {
       return {
-        content: toolResult.content.map(item => ({
-          type: item.type as 'text',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        content: toolResult.content.map((item: any) => ({
+          type: 'text' as const,
           text: item.text,
         })),
         isError: toolResult.isError || false,
