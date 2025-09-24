@@ -1,9 +1,6 @@
 #!/usr/bin/env node
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-
-import { ListResourcesRequestSchema, ListPromptsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-
 
 import { ToolHandlers } from './tool-handlers.js';
 
@@ -15,47 +12,32 @@ if (!OPENROUTER_API_KEY) {
 }
 
 class OpenRouterServer {
-  private server: Server;
+  private server: McpServer;
   private toolHandlers: ToolHandlers;
 
   constructor() {
-    this.server = new Server(
+    this.server = new McpServer(
       {
         name: 'openrouter-server',
         version: '2.3.0',
       },
       {
         capabilities: {
-              tools: {listChanged: true},
-              resources: {listChanged: true},  // to prevent method not found error
-              prompts: {listChanged: true},    // to prevent method not found error
+          tools: { listChanged: true },
+          resources: { listChanged: true }, // to prevent method not found error
+          prompts: { listChanged: true }, // to prevent method not found error
         },
       }
     );
 
     // Initialize tool handlers
     this.toolHandlers = new ToolHandlers(
-      this.server, 
-      OPENROUTER_API_KEY!, 
+      this.server,
+      OPENROUTER_API_KEY as string, // Already validated above
       DEFAULT_MODEL
     );
 
-    // Add list request handlers to avoid method not found in case of polling    
-    this.server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
-      return {
-        resources: []
-      };
-    });
-
-    this.server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
-      return {
-        prompts: []
-      };
-    });
-
-
-    // Error handling
-    this.server.onerror = (error) => console.error('[MCP Error]', error);
+    // Process signal handling
     process.on('SIGINT', async () => {
       await this.server.close();
       process.exit(0);
@@ -65,9 +47,11 @@ class OpenRouterServer {
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
+    // eslint-disable-next-line no-console
     console.error('OpenRouter MCP server running on stdio');
   }
 }
 
 const server = new OpenRouterServer();
+// eslint-disable-next-line no-console
 server.run().catch(console.error);

@@ -45,7 +45,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.7.0",
+    "@modelcontextprotocol/sdk": "^1.17.4",
     "axios": "^1.7.9",
     "openai": "^4.83.0"
   },

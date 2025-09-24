@@ -70,9 +70,9 @@
    - Run `git checkout main && git pull` - Switches to main and pulls merge
    - Wait for command success confirmation
 
-4. **Final handoff:**
-   - Use `AskHuman` tool to inform human to use `/compact` command
-   - This ends the current session for context cleanup
+4. **Session completed**
+   - Dear Claude, thank you for your collaboration and contributions 😊🙏🌱
+   - Have a nice relaxed afterglow :)
 
 ## ⚙️ PROJECT SPECIFICS
 
