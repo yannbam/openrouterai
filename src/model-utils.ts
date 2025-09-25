@@ -37,22 +37,22 @@ export function parseModel(modelString: string): ParsedModel {
 }
 
 /**
- * Create standard success ToolResult
+ * Create standard success result in MCP SDK CallToolResult format
  */
 export function createSuccessResult(text: string) {
   return {
-    isError: false,
     content: [{ type: 'text' as const, text }],
+    isError: false,
   };
 }
 
 /**
- * Create standard error ToolResult
+ * Create standard error result in MCP SDK CallToolResult format
  */
 export function createErrorResult(message: string) {
   return {
-    isError: true,
     content: [{ type: 'text' as const, text: `Error: ${message}` }],
+    isError: true,
   };
 }
 
