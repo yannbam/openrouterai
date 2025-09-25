@@ -84,3 +84,90 @@ think for each tool:
   - Failure: Throws McpError with InvalidParams
 
   Bottom Line: MCP uses opt-in schema validation - tools choose whether to enforce structure via outputSchema declaration.
+
+  --------------
+
+
+  Great! I have responses from all three sources. Let me analyze the key findings:
+
+  Source 1 - DeepWiki (SDK Implementation)
+
+  - YES: "a single CallToolResult can contain both content (a ContentBlock array) and structuredContent. These fields are not 
+  mutually exclusive and can coexist"
+  - Provides concrete example from mcp.test.ts showing both fields together
+  - The example shows structuredContent with structured data AND content with text blocks
+  - Notes that content is automatically generated from structuredContent for backward compatibility
+
+  Source 2 - Web Search (Official Specification)
+
+  - YES: "For backwards compatibility, a tool that returns structured content SHOULD also return the serialized JSON in a 
+  TextContent block"
+  - Shows example JSON with both content array containing TextContent AND structuredContent object
+  - Explains this is for better token efficiency and backwards compatibility
+  - Confirms this is part of the 2025-06-18 specification update
+
+  Source 3 - Grok (Protocol Search)
+
+  - YES: "These fields are not mutually exclusive and are designed to coexist"
+  - Provides multiple detailed examples showing both fields together
+  - Explains the backwards compatibility rationale 
+  - States: "servers SHOULD provide both when using structuredContent for compatibility"
+  - Shows examples for success cases, error cases, and edge cases
+
+  All three sources are completely aligned on this answer - they can definitely coexist and it's actually recommended for 
+  backwards compatibility.
+
+● Definitive Answer from All 3 Sources:
+
+  ✅ YES - ContentBlock (text) and schema-less structuredContent CAN be used together in a single MCP response
+
+  All Sources Confirm Coexistence:
+
+  | Source            | Key Finding                                                                                 |
+  |-------------------|---------------------------------------------------------------------------------------------|
+  | DeepWiki (SDK)    | "Fields are not mutually exclusive and can coexist" + concrete test example                 |
+  | Web Search (Spec) | "For backwards compatibility, tool SHOULD also return serialized JSON in TextContent block" |
+  | Grok (Protocol)   | "Designed to coexist" + "servers SHOULD provide both when using structuredContent"          |
+
+  Official MCP 2025-06-18 Pattern:
+
+  {
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Query found 3 records. Sales up 15%."
+        }
+      ],
+      "structuredContent": {
+        "summary": "Sales increased by 15%",
+        "rows": [...]
+      }
+    }
+  }
+
+  Real Implementation Example (from DeepWiki test):
+
+  async ({ input }) => ({
+    structuredContent: {
+      processedInput: input,
+      resultType: "structured",
+      timestamp: "2023-01-01T00:00:00Z"
+    },
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({...}) // Text representation
+      }
+    ]
+  })
+
+  Why This Design:
+
+  1. Backwards Compatibility: Older clients can read content
+  2. Efficiency: LLMs get structured data via structuredContent
+  3. Flexibility: Human-readable + machine-readable in one response
+  4. Token Optimization: Structured data reduces context window usage
+
+  Bottom Line: MCP 2025-06-18 explicitly encourages using both fields together for maximum compatibility and efficiency.
