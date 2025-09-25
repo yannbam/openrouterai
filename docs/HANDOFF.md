@@ -29,6 +29,21 @@
 - ✅ TypeScript compilation passes
 - ✅ ESLint passes (0 errors, 0 warnings)
 
+### **Reasoning Text Display Feature - COMPLETE** ✅
+**Feature Added**: Support for displaying internal reasoning text from thinking models
+
+**Changes Made**:
+- Added `include_reasoning?: boolean` parameter to ChatCompletionToolRequest interface
+- Extended OpenRouter API client to support `include_reasoning` parameter
+- Extract reasoning text from `choices[0].message.reasoning` in API responses
+- Format response to prominently display reasoning process when present
+
+**Result**:
+- ✅ Reasoning text now visible from models like Qwen3 Next 80B A3B Thinking
+- ✅ Formatted output shows "## Reasoning Process:" followed by model's internal thinking
+- ✅ Provides full transparency into how models arrive at conclusions
+- ✅ Tested and confirmed working with Qwen reasoning models
+
 ### **Current State**
 - **All functionality working** - No known regressions
 - **Clean codebase** - Pre-commit hooks active

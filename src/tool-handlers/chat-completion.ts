@@ -160,8 +160,8 @@ export async function handleChatCompletion(
     const assistantResponseContent = completion.choices[0].message.content || '';
     const assistantRole = completion.choices[0].message.role; // This is 'assistant'
 
-    // Extract reasoning text if present
-    const reasoningText = completion.choices[0].message.reasoning || null;
+    // Extract reasoning text if present - defensive handling
+    const reasoningText = completion.choices?.[0]?.message?.reasoning || null;
 
     if (args.conversationId) {
       const conversationId = args.conversationId;
@@ -200,17 +200,23 @@ export async function handleChatCompletion(
     }
 
     // Format response to match OpenRouter schema
+    const messageObj: any = {
+      role: completion.choices[0].message.role,
+      content: completion.choices[0].message.content || '',
+      tool_calls: completion.choices[0].message.tool_calls,
+    };
+
+    // Only include reasoning field if it has actual content
+    if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
+      messageObj.reasoning = reasoningText;
+    }
+
     const formattedResponse = {
       id: `gen-${Date.now()}`,
       choices: [
         {
           finish_reason: completion.choices[0].finish_reason,
-          message: {
-            role: completion.choices[0].message.role,
-            content: completion.choices[0].message.content || '',
-            tool_calls: completion.choices[0].message.tool_calls,
-            reasoning: reasoningText, // Include reasoning text if present
-          },
+          message: messageObj,
         },
       ],
       created: Math.floor(Date.now() / 1000),
@@ -226,8 +232,9 @@ export async function handleChatCompletion(
     // Format response text to show reasoning prominently if present
     let responseText = `conversationId: ${returnedConversationId}\n\n`;
 
-    if (reasoningText) {
-      responseText += `## Reasoning Process:\n${reasoningText}\n\n## Final Response:\n${JSON.stringify(formattedResponse, null, 2)}`;
+    // Only show reasoning section if we have meaningful reasoning content
+    if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
+      responseText += `## Reasoning Process:\n${reasoningText.trim()}\n\n## Final Response:\n${JSON.stringify(formattedResponse, null, 2)}`;
     } else {
       responseText += JSON.stringify(formattedResponse, null, 2);
     }
