@@ -17,7 +17,7 @@ export class OpenRouterAPIClient {
   private rateLimit: RateLimitState = {
     remaining: 50, // Default conservative value
     reset: Date.now() + 60000,
-    total: 50
+    total: 50,
   };
 
   constructor(apiKey: string) {
@@ -25,10 +25,10 @@ export class OpenRouterAPIClient {
     this.axiosInstance = axios.create({
       baseURL: 'https://openrouter.ai/api/v1',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'HTTP-Referer': 'https://github.com/heltonteixeira/openrouterai',
-        'X-Title': 'MCP OpenRouter Server'
-      }
+        'X-Title': 'MCP OpenRouter Server',
+      },
     });
 
     // Add response interceptor for rate limit headers
@@ -40,8 +40,8 @@ export class OpenRouterAPIClient {
 
         this.rateLimit = {
           remaining,
-          reset: Date.now() + (reset * 1000),
-          total
+          reset: Date.now() + reset * 1000,
+          total,
         };
 
         return response;
@@ -71,7 +71,7 @@ export class OpenRouterAPIClient {
         const response = await this.axiosInstance.get<OpenRouterModelResponse>('/models');
         return {
           data: response.data.data,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
       } catch (error) {
         if (i === RETRY_DELAYS.length) throw error;
@@ -91,6 +91,7 @@ export class OpenRouterAPIClient {
     providers?: string[]; // Legacy support
     provider?: ProviderConfig; // New provider configuration
     reasoning?: 'none' | 'low' | 'medium' | 'high';
+    include_reasoning?: boolean;
     additionalParams?: Record<string, string | number | boolean>;
   }) {
     const requestBody: any = {
@@ -99,12 +100,26 @@ export class OpenRouterAPIClient {
       transforms: [], // Prevent OpenRouter from automatically removing content
     };
 
-    // Add reasoning support if specified and not "none"
-    if (params.reasoning && params.reasoning !== "none") {
+    // Add reasoning support - always include reasoning object
+    if (params.reasoning === 'none') {
       requestBody.reasoning = {
-        effort: params.reasoning,
-        exclude: true // Always exclude reasoning trace per user requirement
+        enabled: false,
       };
+    } else {
+      // Default to "medium" effort if reasoning is not specified or is a valid effort level
+      const effortLevel =
+        params.reasoning && ['low', 'medium', 'high'].includes(params.reasoning)
+          ? params.reasoning
+          : 'medium';
+      requestBody.reasoning = {
+        effort: effortLevel,
+        enabled: true,
+      };
+    }
+
+    // Add include_reasoning parameter if specified
+    if (params.include_reasoning !== undefined) {
+      requestBody.include_reasoning = params.include_reasoning;
     }
 
     // Only include optional parameters if they are provided
@@ -121,7 +136,7 @@ export class OpenRouterAPIClient {
     // Add provider routing - prioritize new provider config over legacy providers
     if (params.provider) {
       const providerConfig: any = {};
-      
+
       if (params.provider.quantizations) {
         providerConfig.quantizations = params.provider.quantizations;
       }
@@ -143,7 +158,7 @@ export class OpenRouterAPIClient {
       if (params.provider.allow_fallbacks !== undefined) {
         providerConfig.allow_fallbacks = params.provider.allow_fallbacks;
       }
-      
+
       requestBody.provider = providerConfig;
     } else if (params.providers && params.providers.length > 0) {
       // Legacy provider support
@@ -160,7 +175,10 @@ export class OpenRouterAPIClient {
 
     // Debug logging to show actual request body
     if (process.env.DEBUG === '1') {
-      console.error('[DEBUG] Actual API Request Body (chatCompletion):', JSON.stringify(requestBody, null, 2));
+      console.error(
+        '[DEBUG] Actual API Request Body (chatCompletion):',
+        JSON.stringify(requestBody, null, 2)
+      );
     }
 
     const response = await this.axiosInstance.post('/chat/completions', requestBody);
@@ -177,13 +195,13 @@ export class OpenRouterAPIClient {
   }
 
   async textCompletion(params: {
-    model: string,
-    prompt: string,
-    max_tokens?: number,
-    temperature?: number,
-    seed?: number,
-    providers?: string[],
-    additionalParams?: Record<string, string | number | boolean>
+    model: string;
+    prompt: string;
+    max_tokens?: number;
+    temperature?: number;
+    seed?: number;
+    providers?: string[];
+    additionalParams?: Record<string, string | number | boolean>;
   }) {
     const requestBody: any = {
       model: params.model,
@@ -205,7 +223,7 @@ export class OpenRouterAPIClient {
     if (params.providers && params.providers.length > 0) {
       requestBody.provider = {
         order: params.providers,
-        allow_fallbacks: false
+        allow_fallbacks: false,
       };
     }
 
@@ -216,7 +234,10 @@ export class OpenRouterAPIClient {
 
     // Debug logging to show actual request body
     if (process.env.DEBUG === '1') {
-      console.error('[DEBUG] Actual API Request Body (textCompletion):', JSON.stringify(requestBody, null, 2));
+      console.error(
+        '[DEBUG] Actual API Request Body (textCompletion):',
+        JSON.stringify(requestBody, null, 2)
+      );
     }
 
     const response = await this.axiosInstance.post('/completions', requestBody);

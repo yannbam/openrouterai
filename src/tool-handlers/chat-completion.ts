@@ -23,6 +23,7 @@ export interface ChatCompletionToolRequest {
   providers?: string[]; // Legacy field for provider selection
   provider?: ProviderConfig; // New comprehensive provider configuration
   reasoning?: 'none' | 'low' | 'medium' | 'high'; // Reasoning support level
+  include_reasoning?: boolean; // Whether to include reasoning text in response
   additionalParams?: Record<string, string | number | boolean>;
 }
 
@@ -151,12 +152,16 @@ export async function handleChatCompletion(
       providers: args.providers, // Legacy support
       provider: args.provider, // New provider configuration
       reasoning: reasoning,
+      include_reasoning: args.include_reasoning,
       additionalParams: args.additionalParams,
     });
 
     const completion = response.data;
     const assistantResponseContent = completion.choices[0].message.content || '';
     const assistantRole = completion.choices[0].message.role; // This is 'assistant'
+
+    // Extract reasoning text if present - defensive handling
+    const reasoningText = completion.choices?.[0]?.message?.reasoning || null;
 
     if (args.conversationId) {
       const conversationId = args.conversationId;
@@ -195,16 +200,23 @@ export async function handleChatCompletion(
     }
 
     // Format response to match OpenRouter schema
+    const messageObj: any = {
+      role: completion.choices[0].message.role,
+      content: completion.choices[0].message.content || '',
+      tool_calls: completion.choices[0].message.tool_calls,
+    };
+
+    // Only include reasoning field if it has actual content
+    if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
+      messageObj.reasoning = reasoningText;
+    }
+
     const formattedResponse = {
       id: `gen-${Date.now()}`,
       choices: [
         {
           finish_reason: completion.choices[0].finish_reason,
-          message: {
-            role: completion.choices[0].message.role,
-            content: completion.choices[0].message.content || '',
-            tool_calls: completion.choices[0].message.tool_calls,
-          },
+          message: messageObj,
         },
       ],
       created: Math.floor(Date.now() / 1000),
@@ -217,8 +229,15 @@ export async function handleChatCompletion(
       },
     };
 
-    const responseText =
-      `conversationId: ${returnedConversationId}\n\n` + JSON.stringify(formattedResponse, null, 2);
+    // Format response text to show reasoning prominently if present
+    let responseText = `conversationId: ${returnedConversationId}\n\n`;
+
+    // Only show reasoning section if we have meaningful reasoning content
+    if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
+      responseText += `## Reasoning Process:\n${reasoningText.trim()}\n\n## Final Response:\n${JSON.stringify(formattedResponse, null, 2)}`;
+    } else {
+      responseText += JSON.stringify(formattedResponse, null, 2);
+    }
 
     return {
       ...createSuccessResult(responseText),
