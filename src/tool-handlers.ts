@@ -27,8 +27,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { ModelCache } from './model-cache.js';
 import { OpenRouterAPIClient } from './openrouter-api.js';
-import { ToolResult } from './types.js';
 import { handleListConversations } from './tool-handlers/list-conversations.js';
+
+// MCP SDK compatible response format
+interface McpToolResponse {
+  content: Array<{ type: 'text'; text: string }>;
+  isError?: boolean;
+  conversationId?: string;
+  [key: string]: unknown;
+}
 
 export class ToolHandlers {
   private server: McpServer;
@@ -46,17 +53,8 @@ export class ToolHandlers {
   }
 
   private setupToolHandlers() {
-    // Helper function to convert ToolResult to CallToolResult format
-    const convertToCallToolResult = (toolResult: ToolResult) => {
-      return {
-        content: toolResult.content.map(item => ({
-          type: item.type as 'text',
-          text: item.text,
-        })),
-        isError: toolResult.isError || false,
-        // Note: conversationId is handled separately and not part of CallToolResult
-      };
-    };
+    // Tool handlers already return the correct CallToolResult format
+    // No conversion needed - just return the results directly
 
     // Register chat completion tool
     this.server.registerTool(
@@ -118,7 +116,7 @@ export class ToolHandlers {
             ),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleChatCompletion(
           {
             params: {
@@ -128,7 +126,19 @@ export class ToolHandlers {
           this.apiClient,
           this.defaultModel
         );
-        return convertToCallToolResult(result);
+
+        // Convert our ToolResult to the MCP SDK format: { content: [{ type: "text", text: string }] }
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        if (result.conversationId) {
+          response.conversationId = result.conversationId;
+        }
+        return response;
       }
     );
     // Register text completion tool
@@ -179,7 +189,7 @@ export class ToolHandlers {
             ),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleTextCompletion(
           {
             params: {
@@ -188,7 +198,18 @@ export class ToolHandlers {
           },
           this.apiClient
         );
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        if ('conversationId' in result && result.conversationId) {
+          response.conversationId = result.conversationId as string;
+        }
+        return response;
       }
     );
     // Register search models tool
@@ -229,7 +250,7 @@ export class ToolHandlers {
             .describe('Maximum number of results to return (default: 10)'),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleSearchModels(
           {
             params: {
@@ -239,7 +260,15 @@ export class ToolHandlers {
           this.apiClient,
           this.modelCache
         );
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
 
@@ -252,7 +281,7 @@ export class ToolHandlers {
           model: z.string().describe('The model ID to get information for'),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleGetModelInfo(
           {
             params: {
@@ -262,7 +291,15 @@ export class ToolHandlers {
           this.modelCache,
           this.apiClient
         );
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
 
@@ -276,7 +313,7 @@ export class ToolHandlers {
           model: z.string().describe('The model ID to get provider information for'),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleGetModelProviders(
           {
             params: {
@@ -286,7 +323,15 @@ export class ToolHandlers {
           this.apiClient,
           this.modelCache
         );
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
 
@@ -299,7 +344,7 @@ export class ToolHandlers {
           model: z.string().describe('The model ID to validate'),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleValidateModel(
           {
             params: {
@@ -308,7 +353,15 @@ export class ToolHandlers {
           },
           this.modelCache
         );
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
 
@@ -321,7 +374,15 @@ export class ToolHandlers {
       },
       async () => {
         const result = await handleListConversations();
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
 
@@ -334,13 +395,21 @@ export class ToolHandlers {
           conversationId: z.string().describe('The ID of the conversation to retrieve.'),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleGetConversationHistory({
           params: {
             arguments: args as GetConversationHistoryToolRequest,
           },
         });
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
 
@@ -353,13 +422,21 @@ export class ToolHandlers {
           conversationId: z.string().describe('The ID of the conversation to delete.'),
         },
       },
-      async args => {
+      async (args: unknown) => {
         const result = await handleDeleteConversation({
           params: {
             arguments: args as DeleteConversationToolRequest,
           },
         });
-        return convertToCallToolResult(result);
+
+        const resultText = result.content[0]?.text || 'Error: No content';
+        const response: McpToolResponse = {
+          content: [{ type: 'text', text: resultText }],
+        };
+        if ('isError' in result && result.isError) {
+          response.isError = true;
+        }
+        return response;
       }
     );
   }

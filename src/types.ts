@@ -1,6 +1,6 @@
 /**
  * Represents a single content item in a tool response.
- * Currently, only text content is supported.
+ * Simple text format for MCP SDK CallToolResult compatibility.
  */
 export interface ResponseContentItem {
   type: 'text';
@@ -9,13 +9,13 @@ export interface ResponseContentItem {
 
 /**
  * Unified structure for all tool handler responses.
- * Follows the principles outlined in the refactoring plan.
+ * Simple format matching MCP SDK CallToolResult.
  */
 export interface ToolResult {
-  /** Indicates whether the tool execution resulted in an error. */
-  isError: boolean;
   /** An array of content items, typically containing a single text item with the result or error message. */
   content: ResponseContentItem[];
+  /** Indicates whether the tool execution resulted in an error. */
+  isError?: boolean;
 }
 
 /**
@@ -27,7 +27,7 @@ export interface ProviderConfig {
   quantizations?: string[];
   /** List of provider names to exclude (e.g., ["openai", "anthropic"]) */
   ignore?: string[];
-  
+
   // Phase 2 - Advanced routing
   /** Sort providers by the specified criteria */
   sort?: 'price' | 'throughput' | 'latency';
