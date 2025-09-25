@@ -91,6 +91,7 @@ export class OpenRouterAPIClient {
     providers?: string[]; // Legacy support
     provider?: ProviderConfig; // New provider configuration
     reasoning?: 'none' | 'low' | 'medium' | 'high';
+    include_reasoning?: boolean;
     additionalParams?: Record<string, string | number | boolean>;
   }) {
     const requestBody: any = {
@@ -114,6 +115,11 @@ export class OpenRouterAPIClient {
         effort: effortLevel,
         enabled: true,
       };
+    }
+
+    // Add include_reasoning parameter if specified
+    if (params.include_reasoning !== undefined) {
+      requestBody.include_reasoning = params.include_reasoning;
     }
 
     // Only include optional parameters if they are provided
