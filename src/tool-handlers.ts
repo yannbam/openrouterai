@@ -98,6 +98,12 @@ export class ToolHandlers {
             .describe(
               'Reasoning level for models that support reasoning (optional). Controls how much reasoning the model does internally before responding. Default: "medium". Set to "none" to disable reasoning.'
             ),
+          raw_response: z
+            .boolean()
+            .optional()
+            .describe(
+              'Return the full JSON response instead of formatted text (optional). Default: false. When false, returns only the message content and conversationId in a clean format.'
+            ),
           additionalParams: z
             .record(z.union([z.string(), z.number(), z.boolean()]))
             .optional()

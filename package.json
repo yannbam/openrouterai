@@ -16,7 +16,7 @@
     "prepare": "husky",
     "watch": "tsc --watch",
     "dev": "tsc --watch",
-    "test": "node src/conversation-manager.test.js",
+    "test": "node dist/conversation-manager.test.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
