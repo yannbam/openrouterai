@@ -18,12 +18,12 @@ export interface ChatCompletionToolRequest {
   model?: string;
   messages: ChatCompletionMessage[];
   temperature?: number;
-  max_tokens?: number;
   seed?: number;
   providers?: string[]; // Legacy field for provider selection
   provider?: ProviderConfig; // New comprehensive provider configuration
   reasoning?: 'none' | 'low' | 'medium' | 'high'; // Reasoning support level
   include_reasoning?: boolean; // Whether to include reasoning text in response
+  raw_response?: boolean; // Return full JSON response instead of formatted text
   additionalParams?: Record<string, string | number | boolean>;
 }
 
@@ -146,7 +146,6 @@ export async function handleChatCompletion(
           model,
           messagesCount: truncatedMessages.length,
           temperature: args.temperature,
-          max_tokens: args.max_tokens,
           seed: args.seed,
           reasoning: reasoning,
           additionalParams: args.additionalParams,
@@ -163,7 +162,6 @@ export async function handleChatCompletion(
       model: modelForAPI,
       messages: truncatedMessages,
       temperature: args.temperature,
-      max_tokens: args.max_tokens,
       seed: args.seed,
       providers: args.providers, // Legacy support
       provider: args.provider, // New provider configuration
@@ -245,14 +243,29 @@ export async function handleChatCompletion(
       },
     };
 
-    // Format response text to show reasoning prominently if present
-    let responseText = `conversationId: ${returnedConversationId}\n\n`;
+    // Format response based on raw_response parameter
+    let responseText: string;
 
-    // Only show reasoning section if we have meaningful reasoning content
-    if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
-      responseText += `## Reasoning Process:\n${reasoningText.trim()}\n\n## Final Response:\n${JSON.stringify(formattedResponse, null, 2)}`;
+    if (args.raw_response) {
+      // Return full JSON response when raw_response is true
+      responseText = `conversationId: ${returnedConversationId}\n\n`;
+
+      // Only show reasoning section if we have meaningful reasoning content
+      if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
+        responseText += `## Reasoning Process:\n${reasoningText.trim()}\n\n## Final Response:\n${JSON.stringify(formattedResponse, null, 2)}`;
+      } else {
+        responseText += JSON.stringify(formattedResponse, null, 2);
+      }
     } else {
-      responseText += JSON.stringify(formattedResponse, null, 2);
+      // Default: return clean formatted text content + conversationId
+      responseText = `conversationId: ${returnedConversationId}\n\n`;
+
+      // Show reasoning prominently if present
+      if (reasoningText && typeof reasoningText === 'string' && reasoningText.trim()) {
+        responseText += `## Reasoning Process:\n${reasoningText.trim()}\n\n## Response:\n${assistantResponseContent}`;
+      } else {
+        responseText += assistantResponseContent;
+      }
     }
 
     return {

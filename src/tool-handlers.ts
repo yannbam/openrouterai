@@ -77,11 +77,6 @@ export class ToolHandlers {
             .max(100)
             .describe('An array of conversation messages with roles and content'),
           temperature: z.number().min(0).max(2).optional().describe('Sampling temperature (0-2)'),
-          max_tokens: z
-            .number()
-            .min(1)
-            .optional()
-            .describe('Maximum number of tokens to generate (optional)'),
           seed: z
             .number()
             .optional()
@@ -97,6 +92,12 @@ export class ToolHandlers {
             .optional()
             .describe(
               'Reasoning level for models that support reasoning (optional). Controls how much reasoning the model does internally before responding. Default: "medium". Set to "none" to disable reasoning.'
+            ),
+          raw_response: z
+            .boolean()
+            .optional()
+            .describe(
+              'Return the full JSON response instead of formatted text (optional). Default: false. When false, returns only the message content and conversationId in a clean format.'
             ),
           additionalParams: z
             .record(z.union([z.string(), z.number(), z.boolean()]))
