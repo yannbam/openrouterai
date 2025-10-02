@@ -22,6 +22,7 @@ export class OpenRouterAPIClient {
 
   constructor(apiKey: string) {
     // Initialize axios instance for OpenRouter API
+    // No timeout - let MCP SDK handle timeouts at protocol level (default 60s, configurable per request)
     this.axiosInstance = axios.create({
       baseURL: 'https://openrouter.ai/api/v1',
       headers: {
@@ -29,7 +30,6 @@ export class OpenRouterAPIClient {
         'HTTP-Referer': 'https://github.com/heltonteixeira/openrouterai',
         'X-Title': 'MCP OpenRouter Server',
       },
-      timeout: 120000, // 120 second timeout for API requests
     });
 
     // Add response interceptor for rate limit headers
