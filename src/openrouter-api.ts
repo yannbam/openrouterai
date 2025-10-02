@@ -29,6 +29,7 @@ export class OpenRouterAPIClient {
         'HTTP-Referer': 'https://github.com/heltonteixeira/openrouterai',
         'X-Title': 'MCP OpenRouter Server',
       },
+      timeout: 120000, // 120 second timeout for API requests
     });
 
     // Add response interceptor for rate limit headers

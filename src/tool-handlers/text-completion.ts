@@ -134,6 +134,7 @@ export async function handleTextCompletion(
           text: `conversationId: ${returnedConversationId}\n\n${completionText}`,
         },
       ],
+      conversationId: returnedConversationId,
     };
   } catch (error: unknown) {
     let errorMessage = 'Unknown error';
