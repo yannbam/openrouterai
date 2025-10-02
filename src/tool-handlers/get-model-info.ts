@@ -30,7 +30,7 @@ export async function handleGetModelInfo(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Model not found: ${model}`,
           },
         ],
@@ -67,7 +67,7 @@ export async function handleGetModelInfo(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(response, null, 2),
         },
       ],
@@ -77,7 +77,7 @@ export async function handleGetModelInfo(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Failed to get model info: ${error.message}`,
           },
         ],

@@ -13,7 +13,7 @@ export async function handleDeleteConversation(request: {
 
   if (!conversationId) {
     return {
-      content: [{ type: 'text', text: 'Error: conversationId is required.' }],
+      content: [{ type: 'text' as const, text: 'Error: conversationId is required.' }],
       isError: true,
     };
   }
@@ -24,7 +24,7 @@ export async function handleDeleteConversation(request: {
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Error: Conversation with ID "${conversationId}" not found or could not be deleted.`,
           },
         ],
@@ -34,7 +34,7 @@ export async function handleDeleteConversation(request: {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `Conversation with ID "${conversationId}" has been deleted successfully.`,
         },
       ],
@@ -47,7 +47,7 @@ export async function handleDeleteConversation(request: {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `Error deleting conversation: ${errorMessage}`,
         },
       ],

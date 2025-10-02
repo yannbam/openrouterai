@@ -13,7 +13,7 @@ export async function handleGetConversationHistory(request: {
 
   if (!conversationId) {
     return {
-      content: [{ type: 'text', text: 'Error: conversationId is required.' }],
+      content: [{ type: 'text' as const, text: 'Error: conversationId is required.' }],
       isError: true,
     };
   }
@@ -23,7 +23,10 @@ export async function handleGetConversationHistory(request: {
     if (!conversation) {
       return {
         content: [
-          { type: 'text', text: `Error: Conversation with ID "${conversationId}" not found.` },
+          {
+            type: 'text' as const,
+            text: `Error: Conversation with ID "${conversationId}" not found.`,
+          },
         ],
         isError: true,
       };
@@ -31,7 +34,7 @@ export async function handleGetConversationHistory(request: {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(conversation.history, null, 2),
         },
       ],
@@ -44,7 +47,7 @@ export async function handleGetConversationHistory(request: {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `Error getting conversation history: ${errorMessage}`,
         },
       ],

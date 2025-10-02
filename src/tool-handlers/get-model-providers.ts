@@ -30,7 +30,7 @@ export async function handleGetModelProviders(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Model '${model}' not found in available models list. Use ai-chat_search_models to find available models.`,
           },
         ],
@@ -45,7 +45,7 @@ export async function handleGetModelProviders(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Failed to fetch provider information for model: ${model}`,
           },
         ],
@@ -67,7 +67,7 @@ export async function handleGetModelProviders(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(response, null, 2),
         },
       ],
@@ -77,7 +77,7 @@ export async function handleGetModelProviders(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Failed to get model providers: ${error.message}`,
           },
         ],

@@ -28,7 +28,9 @@ export async function handleTextCompletion(
     const conversation = convManager.getConversation(args.conversationId);
     if (!conversation) {
       return {
-        content: [{ type: 'text', text: `Conversation with ID ${args.conversationId} not found.` }],
+        content: [
+          { type: 'text' as const, text: `Conversation with ID ${args.conversationId} not found.` },
+        ],
         isError: true,
         conversationId: args.conversationId,
       };
@@ -47,7 +49,7 @@ export async function handleTextCompletion(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: 'Model parameter is required for text completion.',
         },
       ],
@@ -60,7 +62,7 @@ export async function handleTextCompletion(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: 'Prompt parameter is required for text completion.',
         },
       ],
@@ -128,10 +130,11 @@ export async function handleTextCompletion(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `conversationId: ${returnedConversationId}\n\n${completionText}`,
         },
       ],
+      conversationId: returnedConversationId,
     };
   } catch (error: unknown) {
     let errorMessage = 'Unknown error';
@@ -145,7 +148,7 @@ export async function handleTextCompletion(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `OpenRouter API error: ${errorMessage}`,
         },
       ],
