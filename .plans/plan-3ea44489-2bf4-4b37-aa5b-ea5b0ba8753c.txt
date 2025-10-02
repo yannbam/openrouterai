@@ -1,0 +1,9 @@
+🌳 "tool-result-format-simplification"
+📝 Remove redundant tool result wrapping/unwrapping. Make all handlers return CallToolResult format directly, eliminating the intermediate ToolResult format and conversion layer.
+📊 ██████████ 100% (5/5 tasks)
+
+├── ✅ |update-chat-completion| "Update chat-completion.ts to return CallToolResult format directly instead of using createSuccessResult/createErrorResult helpers" (🔴)
+├── ✅ |remove-wrapper-conversion| "Remove the conversion logic in tool-handlers.ts (lines 130-141) that extracts and re-wraps the result" (🔴)
+├── ✅ |cleanup-helpers| "Remove createSuccessResult and createErrorResult from model-utils.ts since they're no longer needed" (🟡)
+├── ✅ |update-types| "Update or remove McpToolResponse interface and any ToolResult type references" (🟡)
+└── ✅ |test-build| "Run TypeScript build to ensure no type errors" (🔴)

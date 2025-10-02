@@ -1,9 +1,9 @@
-import { ProviderConfig, ToolResult } from '../types.js';
-import { createErrorResult, createSuccessResult, debugLog, parseModel } from '../model-utils.js';
+import { debugLog, parseModel } from '../model-utils.js';
 
 import { ConversationManager } from '../conversation-manager.js';
 import { ConversationMessage } from '../conversation.js';
 import { OpenRouterAPIClient } from '../openrouter-api.js';
+import { ProviderConfig } from '../types.js';
 
 // Maximum context tokens (matches tool-handlers.ts)
 const MAX_CONTEXT_TOKENS = 200000;
@@ -63,7 +63,7 @@ export async function handleChatCompletion(
   request: { params: { arguments: ChatCompletionToolRequest } },
   apiClient: OpenRouterAPIClient,
   defaultModel?: string
-): Promise<ToolResult & { conversationId?: string }> {
+) {
   const args = request.params.arguments;
   const convManager = ConversationManager.getInstance();
   let returnedConversationId: string | undefined = args.conversationId;
@@ -73,9 +73,13 @@ export async function handleChatCompletion(
   const rawModel = args.model || defaultModel;
   if (!rawModel) {
     return {
-      ...createErrorResult(
-        'No model specified and no default model configured in MCP settings. Please specify a model or set OPENROUTER_DEFAULT_MODEL in the MCP configuration.'
-      ),
+      content: [
+        {
+          type: 'text' as const,
+          text: 'Error: No model specified and no default model configured in MCP settings. Please specify a model or set OPENROUTER_DEFAULT_MODEL in the MCP configuration.',
+        },
+      ],
+      isError: true,
       conversationId: args.conversationId,
     };
   }
@@ -87,7 +91,13 @@ export async function handleChatCompletion(
   // Validate message array
   if (args.messages.length === 0) {
     return {
-      ...createErrorResult('Messages array cannot be empty. At least one message is required.'),
+      content: [
+        {
+          type: 'text' as const,
+          text: 'Error: Messages array cannot be empty. At least one message is required.',
+        },
+      ],
+      isError: true,
       conversationId: args.conversationId,
     };
   }
@@ -96,7 +106,13 @@ export async function handleChatCompletion(
     const conversation = convManager.getConversation(args.conversationId);
     if (!conversation) {
       return {
-        ...createErrorResult(`Conversation with ID ${args.conversationId} not found.`),
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error: Conversation with ID ${args.conversationId} not found.`,
+          },
+        ],
+        isError: true,
         conversationId: args.conversationId,
       };
     }
@@ -240,13 +256,24 @@ export async function handleChatCompletion(
     }
 
     return {
-      ...createSuccessResult(responseText),
+      content: [
+        {
+          type: 'text' as const,
+          text: responseText,
+        },
+      ],
       conversationId: returnedConversationId,
     };
   } catch (error) {
     if (error instanceof Error) {
       return {
-        ...createErrorResult(`OpenRouter API error: ${error.message}`),
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error: OpenRouter API error: ${error.message}`,
+          },
+        ],
+        isError: true,
         conversationId: returnedConversationId,
       };
     }

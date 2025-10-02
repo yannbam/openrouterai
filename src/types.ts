@@ -1,24 +1,4 @@
 /**
- * Represents a single content item in a tool response.
- * Simple text format for MCP SDK CallToolResult compatibility.
- */
-export interface ResponseContentItem {
-  type: 'text';
-  text: string;
-}
-
-/**
- * Unified structure for all tool handler responses.
- * Simple format matching MCP SDK CallToolResult.
- */
-export interface ToolResult {
-  /** An array of content items, typically containing a single text item with the result or error message. */
-  content: ResponseContentItem[];
-  /** Indicates whether the tool execution resulted in an error. */
-  isError?: boolean;
-}
-
-/**
  * Provider routing configuration for OpenRouter requests
  */
 export interface ProviderConfig {

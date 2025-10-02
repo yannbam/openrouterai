@@ -1,0 +1,54 @@
+{
+  "uuid": "3ea44489-2bf4-4b37-aa5b-ea5b0ba8753c",
+  "name": "tool-result-format-simplification",
+  "details": "Remove redundant tool result wrapping/unwrapping. Make all handlers return CallToolResult format directly, eliminating the intermediate ToolResult format and conversion layer.",
+  "tasks": [
+    {
+      "name": "update-chat-completion",
+      "details": "Update chat-completion.ts to return CallToolResult format directly instead of using createSuccessResult/createErrorResult helpers",
+      "status": "completed",
+      "priority": "high",
+      "uuid": "ef9dcc36-4299-4d41-9112-7febe1271730",
+      "created_at": "2025-10-02T14:48:08.871Z",
+      "updated_at": "2025-10-02T14:49:35.925Z"
+    },
+    {
+      "name": "remove-wrapper-conversion",
+      "details": "Remove the conversion logic in tool-handlers.ts (lines 130-141) that extracts and re-wraps the result",
+      "status": "completed",
+      "priority": "high",
+      "uuid": "1545d28c-5d59-41aa-8f05-3474d94ad447",
+      "created_at": "2025-10-02T14:48:08.872Z",
+      "updated_at": "2025-10-02T14:51:35.613Z"
+    },
+    {
+      "name": "cleanup-helpers",
+      "details": "Remove createSuccessResult and createErrorResult from model-utils.ts since they're no longer needed",
+      "status": "completed",
+      "priority": "medium",
+      "uuid": "75c50efc-2295-4819-a556-8f003f375af6",
+      "created_at": "2025-10-02T14:48:08.872Z",
+      "updated_at": "2025-10-02T14:52:05.737Z"
+    },
+    {
+      "name": "update-types",
+      "details": "Update or remove McpToolResponse interface and any ToolResult type references",
+      "status": "completed",
+      "priority": "medium",
+      "uuid": "0f7d0461-40ba-4c26-b5a2-72e2b758ca33",
+      "created_at": "2025-10-02T14:48:08.872Z",
+      "updated_at": "2025-10-02T14:52:24.162Z"
+    },
+    {
+      "name": "test-build",
+      "details": "Run TypeScript build to ensure no type errors",
+      "status": "completed",
+      "priority": "high",
+      "uuid": "e509e9de-ad1e-4676-af0b-8a00252b94d5",
+      "created_at": "2025-10-02T14:48:08.872Z",
+      "updated_at": "2025-10-02T14:53:42.198Z"
+    }
+  ],
+  "created_at": "2025-10-02T14:48:08.872Z",
+  "updated_at": "2025-10-02T14:53:46.769Z"
+}

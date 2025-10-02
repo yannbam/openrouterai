@@ -37,26 +37,6 @@ export function parseModel(modelString: string): ParsedModel {
 }
 
 /**
- * Create standard success result in MCP SDK CallToolResult format
- */
-export function createSuccessResult(text: string) {
-  return {
-    content: [{ type: 'text' as const, text }],
-    isError: false,
-  };
-}
-
-/**
- * Create standard error result in MCP SDK CallToolResult format
- */
-export function createErrorResult(message: string) {
-  return {
-    content: [{ type: 'text' as const, text: `Error: ${message}` }],
-    isError: true,
-  };
-}
-
-/**
  * Estimate token count for text (rough approximation)
  */
 export function estimateTokenCount(text: string): number {

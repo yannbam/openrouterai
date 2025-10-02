@@ -38,7 +38,7 @@ export async function handleSearchModels(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: JSON.stringify(
               {
                 error: {
@@ -152,7 +152,7 @@ export async function handleSearchModels(
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(response, null, 2),
         },
       ],
@@ -162,7 +162,7 @@ export async function handleSearchModels(
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Failed to search models: ${error.message}`,
           },
         ],

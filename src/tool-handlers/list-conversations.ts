@@ -11,7 +11,7 @@ export async function handleListConversations() {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(conversations, null, 2),
         },
       ],
@@ -24,7 +24,7 @@ export async function handleListConversations() {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `Error listing conversations: ${errorMessage}`,
         },
       ],
