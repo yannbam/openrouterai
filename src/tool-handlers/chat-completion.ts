@@ -18,7 +18,6 @@ export interface ChatCompletionToolRequest {
   model?: string;
   messages: ChatCompletionMessage[];
   temperature?: number;
-  max_tokens?: number;
   seed?: number;
   providers?: string[]; // Legacy field for provider selection
   provider?: ProviderConfig; // New comprehensive provider configuration
@@ -147,7 +146,6 @@ export async function handleChatCompletion(
           model,
           messagesCount: truncatedMessages.length,
           temperature: args.temperature,
-          max_tokens: args.max_tokens,
           seed: args.seed,
           reasoning: reasoning,
           additionalParams: args.additionalParams,
@@ -164,7 +162,6 @@ export async function handleChatCompletion(
       model: modelForAPI,
       messages: truncatedMessages,
       temperature: args.temperature,
-      max_tokens: args.max_tokens,
       seed: args.seed,
       providers: args.providers, // Legacy support
       provider: args.provider, // New provider configuration

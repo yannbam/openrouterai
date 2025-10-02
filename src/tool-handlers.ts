@@ -77,11 +77,6 @@ export class ToolHandlers {
             .max(100)
             .describe('An array of conversation messages with roles and content'),
           temperature: z.number().min(0).max(2).optional().describe('Sampling temperature (0-2)'),
-          max_tokens: z
-            .number()
-            .min(1)
-            .optional()
-            .describe('Maximum number of tokens to generate (optional)'),
           seed: z
             .number()
             .optional()

@@ -87,7 +87,6 @@ export class OpenRouterAPIClient {
     model: string;
     messages: any[];
     temperature?: number;
-    max_tokens?: number;
     seed?: number;
     providers?: string[]; // Legacy support
     provider?: ProviderConfig; // New provider configuration
@@ -126,9 +125,6 @@ export class OpenRouterAPIClient {
     // Only include optional parameters if they are provided
     if (params.temperature !== undefined) {
       requestBody.temperature = params.temperature;
-    }
-    if (params.max_tokens !== undefined) {
-      requestBody.max_tokens = params.max_tokens;
     }
     if (params.seed !== undefined) {
       requestBody.seed = params.seed;
